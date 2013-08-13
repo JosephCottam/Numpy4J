@@ -1,0 +1,29 @@
+<project name="numpy4j" default="jni">
+  <target name="jni">
+    <javac srcdir="./src" destdir="./bin" includeantruntime="false"/>
+    <javah outputFile="./jni/jnihelloworld.h" class="JNI" classpath="./bin" />
+
+    <exec executable="cython">
+      <arg value="./jni/libhelloworld.pyx"/>
+    </exec>
+
+    <exec executable="gcc">
+      <arg value="-shared"/>
+      <arg value="./jni/libhelloworld.c"/>
+      <arg value="-I/System/Library/Frameworks/JavaVM.framework/Versions/A/Headers/"/>
+      <arg value="-I/Volumes/Scratch/jcottam/anaconda/include/python2.7"/>
+      <arg value="-lpython2.7"/>
+      <arg value="-o"/>
+      <arg value="./jni/libhelloworld.jnilib"/>
+
+    </exec>
+  </target>
+
+  <target name="clean">
+    <delete>
+      <fileset dir="./jni/" includes="*.h"/>
+      <fileset dir="./jni/" includes="*.c"/>
+    </delete>
+  </target>
+   
+</project>
