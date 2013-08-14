@@ -1,8 +1,9 @@
 *.class
-
-# Package Files #
+*.properties
 *.jar
 *.war
 *.ear
 jep/*
 *.c
+*.jnilib
+*.h

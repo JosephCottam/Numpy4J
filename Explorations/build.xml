@@ -1,7 +1,11 @@
 <project name="numpy4j" default="jni">
+  <property file="numpy4j.properties"/> 
+  <!--java.path= root of the actual java installation-->
+  <!--python.path= root of the python isntallation-->
+
   <target name="jni">
-    <javac srcdir="./src" destdir="./bin" includeantruntime="false"/>
-    <javah outputFile="./jni/jnihelloworld.h" class="JNI" classpath="./bin" />
+    <javac srcdir="./src" destdir="./jni" includeantruntime="false"/>
+    <javah outputFile="./jni/helloworld.h" class="HelloWorld" classpath="./jni" />
 
     <exec executable="cython">
       <arg value="./jni/libhelloworld.pyx"/>
@@ -10,8 +14,8 @@
     <exec executable="gcc">
       <arg value="-shared"/>
       <arg value="./jni/libhelloworld.c"/>
-      <arg value="-I/System/Library/Frameworks/JavaVM.framework/Versions/A/Headers/"/>
-      <arg value="-I/Volumes/Scratch/jcottam/anaconda/include/python2.7"/>
+      <arg value="-I${java.path}/Headers/"/>
+      <arg value="-I${python.path}/include/python2.7"/>
       <arg value="-lpython2.7"/>
       <arg value="-o"/>
       <arg value="./jni/libhelloworld.jnilib"/>
@@ -21,8 +25,8 @@
 
   <target name="clean">
     <delete>
-      <fileset dir="./jni/" includes="*.h"/>
       <fileset dir="./jni/" includes="*.c"/>
+      <fileset dir="./jni/" includes="*.class"/>
     </delete>
   </target>
    

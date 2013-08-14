@@ -1,0 +1,3 @@
+JNI: http://www3.ntu.edu.sg/home/ehchua/programming/java/JavaNativeInterface.html
+JNI and Python: pommereau.blogspot.com/2009/05/interfacing-java-and-python-through-jni.html
+ 
