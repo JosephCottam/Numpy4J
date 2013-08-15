@@ -1,0 +1,58 @@
+<project name="numpy4j" default="compile">
+  <property file="system.properties"/> 
+
+  <target name="verify" description="Verify the configuration information is present.">
+    <available file="system.properties" property="build.properties.present"/>
+    <fail unless="build.properties.present">
+      System.properties file not found.\n
+      Needs to include java.path and python.path (indicating the root directories for each).
+    </fail>
+  </target>
+
+  <target name="compile" description="Main build target" depends="verify">
+    <mkdir dir="./bin"/>
+    <javac srcdir="." destdir="./bin" includeantruntime="false"/>
+    <javah outputFile="./bin/HelloJNI.h" class="HelloJNI" classpath="./bin" />
+
+    <exec executable="gcc">
+      <arg value="-o"/>
+      <arg value="./bin/libhelloJNI.jnilib"/>
+      <arg value="-shared"/>
+      <arg value="-I${java.path}/Headers/"/>
+      <arg value="-I${python.path}/include/python2.7"/>
+      <arg value="-lpython2.7"/>
+      <arg value="combined.c"/>
+    </exec>
+  </target>
+
+  <target name="clean">
+    <delete>
+      <fileset dir="./bin" includes="**/*"/>
+    </delete>
+  </target>
+
+
+   
+  <target name="jni" depends="verify">
+    <javac srcdir="." destdir="./bin" includeantruntime="false"/>
+    <javah outputFile="./bin/HelloJNI.h" class="HelloJNI" classpath="./bin" />
+
+    <exec executable="gcc">
+      <arg value="-o"/>
+      <arg value="./bin/libhelloJNI.jnilib"/>
+      <arg value="-shared"/>
+      <arg value="-I${java.path}/Headers/"/>
+      <arg value="HelloJNI.c"/>
+    </exec>
+  </target>
+
+  <target name="py" depends="verify">
+    <exec executable="gcc">
+      <arg value="-o"/>
+      <arg value="./bin/embedded.o"/>
+      <arg value="-I${python.path}/include/python2.7"/>
+      <arg value="-lpython2.7"/>
+      <arg value="embedded.c"/>
+    </exec>
+  </target>
+</project>

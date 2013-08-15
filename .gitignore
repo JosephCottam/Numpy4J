@@ -4,6 +4,6 @@
 *.war
 *.ear
 jep/*
-*.c
 *.jnilib
-*.h
+*.log
+*.jnilib

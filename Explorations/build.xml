@@ -12,14 +12,13 @@
     </exec>
 
     <exec executable="gcc">
+      <arg value="-o"/>
+      <arg value="./jni/libhelloworld.so"/>
       <arg value="-shared"/>
-      <arg value="./jni/libhelloworld.c"/>
       <arg value="-I${java.path}/Headers/"/>
       <arg value="-I${python.path}/include/python2.7"/>
       <arg value="-lpython2.7"/>
-      <arg value="-o"/>
-      <arg value="./jni/libhelloworld.jnilib"/>
-
+      <arg value="./jni/libhelloworld.c"/>
     </exec>
   </target>
 
