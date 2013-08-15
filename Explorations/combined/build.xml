@@ -1,0 +1,30 @@
+<project name="combined exploration" default="jni">
+  <property file="system.properties"/> 
+  <!--java.path= root of the actual java installation-->
+  <!--python.path= root of the python isntallation-->
+
+  <target name="jni">
+    <mkdir dir="bin"/>
+    <javac srcdir="." destdir="bin" includeantruntime="false"/>
+    <javah outputFile="./bin/helloworld.h" class="HelloWorld" classpath="./bin" />
+
+    <exec executable="gcc">
+      <arg value="-shared"/>
+      <arg value="./libhelloworld.c"/>
+      <arg value="-I${java.path}/Headers/"/>
+      <arg value="-I${python.path}/include/python2.7"/>
+      <arg value="-lpython2.7"/>
+      <arg value="-o"/>
+      <arg value="./bin/libhelloworld.jnilib"/>
+    </exec>
+  </target>
+
+  <target name="clean">
+    <delete dir="bin"/>
+  </target>
+
+  <target name="exec">
+    <java classname="HelloWorld" classpath="./bin" jvmargs="-Djava.library.path=./bin"/>
+  </target>
+   
+</project>

@@ -1,0 +1,28 @@
+<project name="numpy4j" default="jni">
+  <property file="numpy4j.properties"/> 
+  <!--java.path= root of the actual java installation-->
+  <!--python.path= root of the python isntallation-->
+
+  <target name="jni">
+    <javac srcdir="." destdir="." includeantruntime="false"/>
+    <javah outputFile="helloworld.h" class="HelloWorld" classpath="." />
+
+    <exec executable="gcc">
+      <arg value="libhelloworld.c"/>
+      <arg value="-I${java.path}/Headers/"/>
+      <arg value="-I${python.path}/include/python2.7"/>
+      <arg value="-lpython2.7"/>
+      <arg value="-o"/>
+      <arg value="libhelloworld.jnilib"/>
+
+    </exec>
+  </target>
+
+  <target name="clean">
+    <delete>
+      <fileset dir="./jni/" includes="*.c"/>
+      <fileset dir="./jni/" includes="*.class"/>
+    </delete>
+  </target>
+   
+</project>

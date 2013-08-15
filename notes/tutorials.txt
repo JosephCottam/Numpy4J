@@ -1,3 +1,7 @@
-JNI: http://www3.ntu.edu.sg/home/ehchua/programming/java/JavaNativeInterface.html
+JNI tutorial: http://www3.ntu.edu.sg/home/ehchua/programming/java/JavaNativeInterface.html
+
+embedding python: http://docs.python.org/2/extending/embedding.html 
+
+
 JNI and Python: pommereau.blogspot.com/2009/05/interfacing-java-and-python-through-jni.html
- 
+--> Uses Cython to generate the python-java bridge...doesn't seem to work reliably

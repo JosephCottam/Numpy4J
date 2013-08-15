@@ -1,0 +1,8 @@
+gcc helloworld.c -o libhelloworld.jnilib
+chmod a+x libhelloworld.jnilib
+./libhelloworld.jnilib
+
+
+JNI calling a C funciton...
+gcc -Wall -I/System/Library/Frameworks/JavaVM.framework/Versions/Current/Headers/ -shared -o myjni.jnilib TestJNIPrimitive.c
+java -Djava.library.path=. TestJNIPrimitive
