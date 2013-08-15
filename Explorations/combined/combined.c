@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <stdio.h>
-#include "./bin/HelloJNI.h"
+#include "./bin/combinedJNI.h"
 #include <Python.h>
 
 
@@ -14,9 +14,23 @@ void JNI_OnUnload(JavaVM *vm, void *reserved) {
   Py_Finalize();
 }
 
+JNIEXPORT void JNICALL Java_HelloCombined_sayHello
+  (JNIEnv *env, jobject thisObj, jstring name) {
 
-JNIEXPORT void JNICALL Java_HelloJNI_sayHello(JNIEnv *env, jobject thisObj) {
+  PyObject *pName, *pModule, *pDict, *pFunc, *pArgs, *pValue;
+
+
+  const char* _name = (*env)->GetStringUTFChars(env, name, NULL);
+  pName = PyString_FromString(_name);
+
+  pModule = PyImport_Import(PyString_FromString("numpy"));
+
+
+
+
   PyRun_SimpleString("from time import time,ctime\n"
       "print 'Today is',ctime(time())\n");
-   return;
+
+  (*env)->ReleaseStringUTFChars(env, name, _name);
+  return;  
 }

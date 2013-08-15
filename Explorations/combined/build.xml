@@ -2,6 +2,7 @@
   <property file="system.properties"/> 
 
   <target name="verify" description="Verify the configuration information is present.">
+    <mkdir dir="./bin"/>
     <available file="system.properties" property="build.properties.present"/>
     <fail unless="build.properties.present">
       System.properties file not found.\n
@@ -9,20 +10,23 @@
     </fail>
   </target>
 
-  <target name="compile" description="Main build target" depends="verify">
-    <mkdir dir="./bin"/>
-    <javac srcdir="." destdir="./bin" includeantruntime="false"/>
-    <javah outputFile="./bin/HelloJNI.h" class="HelloJNI" classpath="./bin" />
-
+  <target name="compile" description="Main build target" depends="verify, headers">
     <exec executable="gcc">
       <arg value="-o"/>
-      <arg value="./bin/libhelloJNI.jnilib"/>
+      <arg value="./bin/libcombinedJNI.jnilib"/>
       <arg value="-shared"/>
       <arg value="-I${java.path}/Headers/"/>
       <arg value="-I${python.path}/include/python2.7"/>
       <arg value="-lpython2.7"/>
       <arg value="combined.c"/>
     </exec>
+
+    <copy file="./hello.py" tofile="./bin/hello.py"/>
+  </target>
+
+  <target name="headers" >
+    <javac srcdir="." destdir="./bin" includeantruntime="false"/>
+    <javah outputFile="./bin/HelloCombined.h" class="HelloCombined" classpath="./bin" />
   </target>
 
   <target name="clean">
@@ -33,7 +37,7 @@
 
 
    
-  <target name="jni" depends="verify">
+  <target name="jni-example" depends="verify">
     <javac srcdir="." destdir="./bin" includeantruntime="false"/>
     <javah outputFile="./bin/HelloJNI.h" class="HelloJNI" classpath="./bin" />
 
@@ -46,7 +50,7 @@
     </exec>
   </target>
 
-  <target name="py" depends="verify">
+  <target name="py-example" depends="verify">
     <exec executable="gcc">
       <arg value="-o"/>
       <arg value="./bin/embedded.o"/>
