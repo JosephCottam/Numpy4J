@@ -1,0 +1,47 @@
+<project name="numpy4j" default="build">
+  <property file="system.properties"/> 
+  <property name="src" value="./src"/>
+  <property name="bin" value="./bin"/>
+
+
+  <target name="verify" description="Verify the configuration information is present.">
+    <mkdir dir="${bin}"/>
+
+    <available file="system.properties" property="build.properties.present"/>
+    <fail unless="build.properties.present">
+      System.properties file not found.\n
+      Needs to include java.headers (path), python.headers (path) and python.version (pythonX.X).
+    </fail>
+  </target>
+
+  <target name="build" description="Main build target" depends="verify, _javac, _jni, _c"/>
+  
+  <target name="_c">
+    <copy todir="${bin}/c" flatten="true">
+      <fileset dir="${src}" includes="**/*.c"/>
+    </copy>
+
+    <exec executable="gcc">
+      <arg value="-o"/>
+      <arg value="${bin}/libJNIbridge.jnilib"/>
+      <arg value="-shared"/>
+      <arg value="-I${java.path}"/>
+      <arg value="-I${python.path}"/>
+      <arg value="-l${python.version}"/>
+      <arg value="${bin}/c/JNIbridge.c"/>
+    </exec>
+  </target>
+  
+  <target name="_javac" description="Build java classes">
+    <javac srcdir="." destdir="./bin" includeantruntime="false"/>
+  </target>
+
+  <target name="_jni" description="Build JNI headers">
+    <javah outputFile="${bin}/c/JNIBridge.h" class="np.JNIBridge" classpath="${bin}" />
+  </target>
+
+  <target name="clean">
+    <delete dir="${bin}"/>
+    <mkdir dir="${bin}"/>
+  </target>
+</project>
