@@ -7,3 +7,4 @@ jep/*
 *.jnilib
 *.log
 *.jnilib
+*.pyc
