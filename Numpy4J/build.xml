@@ -4,7 +4,10 @@
   <property name="bin" value="./bin"/>
 
 
-  <target name="verify" description="Verify the configuration information is present.">
+
+  <target name="build" description="Main build target" depends="_verify, _javac, _jni, _c"/>
+  
+  <target name="_verify" description="Verify the configuration information is present.">
     <mkdir dir="${bin}"/>
 
     <available file="system.properties" property="build.properties.present"/>
@@ -13,9 +16,15 @@
       Needs to include java.headers (path), python.headers (path) and python.version (pythonX.X).
     </fail>
   </target>
-
-  <target name="build" description="Main build target" depends="verify, _javac, _jni, _c"/>
   
+  <target name="_javac" description="Build java classes">
+    <javac srcdir="." destdir="./bin" includeantruntime="false"/>
+  </target>
+
+  <target name="_jni" description="Build JNI headers">
+    <javah outputFile="${bin}/c/JNIBridge.h" class="np.JNIBridge" classpath="${bin}" />
+  </target>
+
   <target name="_c">
     <copy todir="${bin}/c" flatten="true">
       <fileset dir="${src}" includes="**/*.c"/>
@@ -32,16 +41,15 @@
     </exec>
   </target>
   
-  <target name="_javac" description="Build java classes">
-    <javac srcdir="." destdir="./bin" includeantruntime="false"/>
-  </target>
-
-  <target name="_jni" description="Build JNI headers">
-    <javah outputFile="${bin}/c/JNIBridge.h" class="np.JNIBridge" classpath="${bin}" />
-  </target>
 
   <target name="clean">
     <delete dir="${bin}"/>
     <mkdir dir="${bin}"/>
+  </target>
+
+  <target name="exec" description="Simple test...">
+    <java classname="np.JNIBridge" classpath="${bin}" fork="true">
+      <jvmarg value="-Djava.library.path=${bin}"/>
+    </java>
   </target>
 </project>

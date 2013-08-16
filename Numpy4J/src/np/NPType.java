@@ -12,7 +12,8 @@ public class NPType {
   private final DTYPE dtype;
   private final ORDER order;
 
-  public NPType() {this(DTYPE.DEFER, ORDER.DEFER);}
+  /**Default NPType is int32 and c-order.**/
+  public NPType() {this(DTYPE.int32, ORDER.c);}
   public NPType(DTYPE dtype, ORDER order) {
     this.dtype = dtype;
     this.order = order;
@@ -23,4 +24,7 @@ public class NPType {
 
   public NPType order(ORDER order) {return new NPType(this.dtype, order);}
   public ORDER order() {return order;}
+
+  /**NPType with both dtype and order defered.**/
+  public static NPType defer() {return new NPType(DTYPE.DEFER, ORDER.DEFER);}
 }

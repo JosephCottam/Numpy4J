@@ -19,6 +19,6 @@ void JNI_OnUnload(JavaVM *vm, void *reserved) {
 
 JNIEXPORT jint JNICALL Java_np_JNIBridge_max
 (JNIEnv *env, jobject this, jobject array) {
-  return 0;
+  return 123;
 }
 
