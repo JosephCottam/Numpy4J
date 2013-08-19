@@ -10,8 +10,11 @@ public class JNIBridge {
 
   public static void main(String[] args){ 
     NPType type = new NPType();
-    NPArray array = NPArray.allocate(type, 10);
+    NPArray array = NPArray.allocate(type, 40);
+    array.arange();
     JNIBridge bridge= new JNIBridge();
+
+    System.out.println(array);
 
     System.out.println(bridge.max(array));
 

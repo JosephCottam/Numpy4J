@@ -47,7 +47,7 @@
     <mkdir dir="${bin}"/>
   </target>
 
-  <target name="exec" description="Simple test...">
+  <target name="exec" description="Simple test..." depends="build">
     <java classname="np.JNIBridge" classpath="${bin}" fork="true">
       <jvmarg value="-Djava.library.path=${bin}"/>
     </java>
