@@ -2,6 +2,7 @@ package np;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.nio.ByteOrder;
 
 public class NPArray {
   private final int test=1;
@@ -27,7 +28,7 @@ public class NPArray {
   public void arange() {
     IntBuffer ints = buffer.asIntBuffer();
     int size = ints.capacity()/type.dtype().bytes;
-    for (int i=0; i<size; i++) {ints.put(i,i);}
+    for (int i=0; i<size; i++) {ints.put(i,i*100);}
   }
 
   public static int DISPLAY_LIMIT=10;
@@ -55,6 +56,9 @@ public class NPArray {
 
     int capacity = size * dtype.bytes;
     ByteBuffer b = ByteBuffer.allocateDirect(capacity);
+    b.order(ByteOrder.nativeOrder());  //TODO: add byte-order support to dtype
+    System.out.println("O:" + b.order());
+    System.out.println("N:" + java.nio.ByteOrder.nativeOrder().toString());
     return new NPArray(b, type);
   }
 }

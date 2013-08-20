@@ -56,7 +56,7 @@ JNIEXPORT jint JNICALL Java_np_JNIBridge_max
   PyObject *dtype = PyObject_CallObject(dtypeFunc, dtypeArgs);
   Py_DECREF(dtypeArgs);
 
-  //Create numpy array: see numppy.frombuffer
+  //Create numpy array
   PyObject *arrayArgs = PyTuple_New(2);
   PyTuple_SetItem(arrayArgs, 0, pybuffer);
   PyTuple_SetItem(arrayArgs, 1, dtype);
@@ -65,9 +65,15 @@ JNIEXPORT jint JNICALL Java_np_JNIBridge_max
   Py_DECREF(arrayArgs);
 
   //Invoke max
-  PyObject *max = PyObject_CallObject(npMaxFunc, nparray);
+  PyObject *maxArgs = PyTuple_New(1);
+  PyTuple_SetItem(maxArgs, 0, nparray);
+  PyObject *max = PyObject_CallObject(npMaxFunc, maxArgs);
   Py_DECREF(nparray);
+  Py_DECREF(maxArgs);
+  long rv = PyInt_AsLong(max);
+  printf("Result of call: %ld\n", rv);
+  //Py_DECREF(max);
 
-  return max;
+  return (jint) rv;
 }
 
