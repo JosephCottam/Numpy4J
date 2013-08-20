@@ -28,11 +28,12 @@ public class NPArray {
   public void arange() {
     IntBuffer ints = buffer.asIntBuffer();
     int size = ints.capacity()/type.dtype().bytes;
-    for (int i=0; i<size; i++) {ints.put(i,i*100);}
+    for (int i=0; i<size; i++) {ints.put(i,i);}
   }
 
   public static int DISPLAY_LIMIT=10;
-  //TODO: Extend to respect dtype 
+  
+  //TODO: Extend to consider dtype 
   public String toString() {
     StringBuilder b = new StringBuilder();
     b.append("NPArray{");
