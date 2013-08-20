@@ -14,9 +14,9 @@ public class JNIBridge {
     array.arange();
     JNIBridge bridge= new JNIBridge();
 
-    System.out.println(array);
+    System.out.printf("Input: %s\n", array);
 
-    System.out.println(bridge.max(array));
+    System.out.printf("Max: %s\n", bridge.max(array));
 
   }
 }

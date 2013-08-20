@@ -58,8 +58,6 @@ public class NPArray {
     int capacity = size * dtype.bytes;
     ByteBuffer b = ByteBuffer.allocateDirect(capacity);
     b.order(ByteOrder.nativeOrder());  //TODO: add byte-order support to dtype
-    System.out.println("O:" + b.order());
-    System.out.println("N:" + java.nio.ByteOrder.nativeOrder().toString());
     return new NPArray(b, type);
   }
 }
