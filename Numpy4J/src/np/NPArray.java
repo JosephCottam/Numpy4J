@@ -7,6 +7,7 @@ import java.nio.ByteOrder;
 public class NPArray {
   private final ByteBuffer buffer; 
   private final NPType type;
+  private long jnicache=-1;
 
   private NPArray(ByteBuffer buffer, NPType type){
     this.buffer = buffer;
