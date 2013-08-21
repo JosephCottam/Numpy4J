@@ -47,8 +47,14 @@
     <mkdir dir="${bin}"/>
   </target>
 
-  <target name="exec" description="Simple test..." >
-    <java classname="np.JNIBridge" classpath="${bin}" fork="true">
+  <target name="exec" description="Simple test.  Usually points to a test of the current feature-under-development." >
+    <java classname="np.test.Exec" classpath="${bin}" fork="true">
+      <jvmarg value="-Djava.library.path=${bin}"/>
+    </java>
+  </target>
+
+  <target name="test" description="Run tests">
+    <java classname="np.test.Tests" classpath="${bin}" fork="true">
       <jvmarg value="-Djava.library.path=${bin}"/>
     </java>
   </target>
