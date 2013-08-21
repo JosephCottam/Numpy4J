@@ -6,7 +6,7 @@ import np.*;
 public class Exec {
   public static void main(String[] args){ 
     NPType type = new NPType();
-    NPArray array = NPArray.allocate(type, 40);
+    NPArray array = NPArray.allocate(type, 10);
     array.arange();
     JNIBridge bridge= new JNIBridge();
 

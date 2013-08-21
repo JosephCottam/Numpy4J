@@ -1,6 +1,13 @@
 By example jni: http://www3.ntu.edu.sg/home/ehchua/programming/java/JavaNativeInterface.html
+
 Oracle jni: http://docs.oracle.com/javase/1.5.0/docs/guide/jni/spec/jniTOC.html
+
 Alternate jni: http://journals.ecs.soton.ac.uk/java/tutorial/native1.1/implementing/index.html
+
 embedding python: http://docs.python.org/2/extending/embedding.html 
+
 JNI and Python: pommereau.blogspot.com/2009/05/interfacing-java-and-python-through-jni.html
 --> Uses Cython to generate the python-java bridge...doesn't seem to work reliably
+
+
+Creating a direct byte buffer from an existing blob of memory (maybe): http://docs.oracle.com/javase/1.4.2/docs/guide/jni/jni-14.html#NewDirectByteBuffer

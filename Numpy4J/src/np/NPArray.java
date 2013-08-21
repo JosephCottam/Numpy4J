@@ -5,7 +5,6 @@ import java.nio.IntBuffer;
 import java.nio.ByteOrder;
 
 public class NPArray {
-  private final int test=1;
   private final ByteBuffer buffer; 
   private final NPType type;
 
@@ -20,15 +19,16 @@ public class NPArray {
   /**Actual backing buffer.  This method is accessed by name via JNI, do not change without updating JNI code.**/
   public ByteBuffer buffer() {return buffer;}
 
-  public Number getRaw(int i) {return null;}
+  //TODO: Modify the "buffer.getXXX" to respect dtype
+  public Number getRaw(int i) {return buffer.getInt(i*type.dtype().bytes);}
+  public int getRawInt(int i) {return buffer.getInt(i*type.dtype().bytes);}
   public Number getValue(Index i) {return null;}
   public NPArray getSlice(Index i) {return null;}
 
   //TODO: Extend to respect dtype 
   public void arange() {
     IntBuffer ints = buffer.asIntBuffer();
-    int size = ints.capacity()/type.dtype().bytes;
-    for (int i=0; i<size; i++) {ints.put(i,i);}
+    for (int i=0; i<size(); i++) {ints.put(i,i);}
   }
 
   public static int DISPLAY_LIMIT=10;
@@ -36,17 +36,18 @@ public class NPArray {
   //TODO: Extend to consider dtype 
   public String toString() {
     StringBuilder b = new StringBuilder();
-    b.append("NPArray{");
-    
+    b.append("NPArray[");
+    b.append(size());
+    b.append("]{");
+
     IntBuffer ints = buffer.asIntBuffer();
-    int size = ints.capacity()/type.dtype().bytes;
-    for (int i=0; i<DISPLAY_LIMIT && i < size; i++) {
+    for (int i=0; i<DISPLAY_LIMIT && i < size(); i++) {
       b.append(ints.get(i));
       b.append(", ");
     }
     b.deleteCharAt(b.length()-1);
     b.deleteCharAt(b.length()-1);
-    if (size > DISPLAY_LIMIT) {b.append("...");} 
+    if (size() > DISPLAY_LIMIT) {b.append("...");} 
     b.append("}");
     return b.toString();
   }

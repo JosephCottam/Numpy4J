@@ -8,6 +8,8 @@ const char* jNP_ARRAY_BUFFER_FIELD = "buffer";
 const char* jBYTE_BUFFER_NAME = "java/nio/ByteBuffer";
 const char* jBYTE_BUFFER_TYPE = "Ljava/nio/ByteBuffer;";
 jfieldID BUFFER_FID;
+jfieldID NP_ARRAY_FID;
+
 
 PyObject *npModule, *dtypeFunc, *fromBufferFunc;
 const char* NP_MODULE = "numpy";
@@ -21,10 +23,14 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   //Safely cache relevant java class information
   JNIEnv *env;
   (*vm)->AttachCurrentThread(vm, (void **) &env, NULL);
+  if((*env)->ExceptionOccurred(env)) {return;}
 
   jclass classNPArray = (*env)->FindClass(env, jNP_ARRAY_NAME);
+  if((*env)->ExceptionOccurred(env)) {return;}
   jclass classByteBuffer = (*env)->FindClass(env, jBYTE_BUFFER_NAME);
+  if((*env)->ExceptionOccurred(env)) {return;}
   BUFFER_FID = (*env)->GetFieldID(env, classNPArray, jNP_ARRAY_BUFFER_FIELD, jBYTE_BUFFER_TYPE);
+  if((*env)->ExceptionOccurred(env)) {return;}
   (*vm)->DetachCurrentThread(vm);
 
   //Setup python environment, acquire required functions
@@ -69,6 +75,13 @@ PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
 
   return nparray;
 }
+
+//Stores the np array produced in the java object for later retrieval
+//TODO: Implement decref on java finalize via  JNI bridge or this caching strategy will leak memory on the python side
+void cache_np_array(jobject jnparray, PyObject *nparray) {
+  (*env)->SetLongField(env, jnparray, NP_ARRAY_FID, (long) nparray);
+}
+
 
 //Invoke a np function that returns an int
 int invoke_int_func(PyObject *func, PyObject *nparray) {

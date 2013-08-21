@@ -1,35 +1,52 @@
 package np.test;
 
 import np.*;
+import np.util.Args;
 
 public class Tests {
   public static final JNIBridge BRIDGE= new JNIBridge();
   public static interface Action {
     public long probeBridge(NPArray array);
     public long probeJVM(NPArray array);
+    public String name();
   }
 
+  public static int ITERATIONS = 1000;
   public static void searchCrossover(Action r) {
-    int size=10000;
-    int low=size;
-    int high=size;
-    boolean found=false;
+    int size=10;
 
-    while (!found) {
+    while (size < Integer.MAX_VALUE) {
+      System.out.printf("Testing at %d %d times\n", size, ITERATIONS);
       NPType type = new NPType();
       NPArray array = NPArray.allocate(type, size);
       array.arange();
 
-      long before = System.currentTimeMillis();
-      r.probeBridge(array);
-      long after = System.currentTimeMillis();
-      long bridgeTime = after-before;
+      long before = System.nanoTime();
+      long bridgeVal=0;;
+      for (int i=0; i<ITERATIONS; i++) {bridgeVal = r.probeBridge(array);}
+      long after = System.nanoTime();
+      final long bridgeTime = after-before;
 
-      before = System.currentTimeMillis();
-      r.probeJVM(array);
-      after = System.currentTimeMillis();
-      long jvmTime = after-before;
+      before = System.nanoTime();
+      long jvmVal=0;
+      for (int i=0; i<ITERATIONS; i++) {jvmVal = r.probeJVM(array);}
+      after = System.nanoTime();
+      final long jvmTime = after-before;
+
+      if (bridgeVal != jvmVal) {
+        System.out.printf("Non-matching values %d (jvm) vs. %d (np) at size %d.\nABORTING!!!!\n\n", jvmVal, bridgeVal, size);
+        break;
+      }
+      
+      System.out.printf("count %d -- Bridge/JVM=Ratio  : %d/%d=%f\n", size, bridgeTime, jvmTime, bridgeTime/(double)jvmTime);
+      if (bridgeTime < jvmTime) {
+        System.out.printf("%s crossover: %d items\n", r.name(), size);
+        break;
+      }
+
+      size = size*2;
     }
+
   }
 
   /**Find where the bridge is more efficient than java specific tasks.**/
@@ -39,10 +56,11 @@ public class Tests {
       public long probeJVM(NPArray array) {
         int max = Integer.MIN_VALUE;
         for (int i=0; i<array.size(); i++) {
-          max = Math.max(max, array.getRaw(i).intValue());
+          max = Math.max(max, array.getRawInt(i));
         }
         return max;
       }
+      public String name() {return "Max";}
     };
     searchCrossover(r);
 
@@ -50,15 +68,7 @@ public class Tests {
   }
  
   public static void main(String[] args){ 
-    NPType type = new NPType();
-    NPArray array = NPArray.allocate(type, 40);
-    array.arange();
-    JNIBridge bridge= new JNIBridge();
-
-    System.out.printf("Input: %s\n", array);
-
-    System.out.printf("Max: %s\n", bridge.max(array));
-    System.out.printf("Min: %s\n", bridge.min(array));
-
+    ITERATIONS = Integer.parseInt(Args.key(args,"-i",Integer.toString(ITERATIONS)));
+    crossoverMax();
   }
 }

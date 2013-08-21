@@ -2,7 +2,7 @@ package np;
 
 /**Represents all of the numpy dtype, shape and flags information**/
 public class NPType {
-  enum DTYPE {int8(8), int16(16), int32(32), int64(64), float32(32), float64(64), DEFER(0);
+  public enum DTYPE {int8(1), int16(2), int32(4), int64(8), float32(4), float64(8), DEFER(0);
     public final int bytes;
      DTYPE(int bytes) {this.bytes = bytes;}
   }
