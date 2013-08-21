@@ -12,8 +12,9 @@ public class Tests {
   }
 
   public static int ITERATIONS = 1000;
+  public static int INITIAL_SIZE = 1000;
   public static void searchCrossover(Action r) {
-    int size=10;
+    int size=INITIAL_SIZE;
 
     while (size < Integer.MAX_VALUE) {
       System.out.printf("Testing at %d %d times\n", size, ITERATIONS);
@@ -69,6 +70,7 @@ public class Tests {
  
   public static void main(String[] args){ 
     ITERATIONS = Integer.parseInt(Args.key(args,"-i",Integer.toString(ITERATIONS)));
+    INITIAL_SIZE = Integer.parseInt(Args.key(args,"-n",Integer.toString(INITIAL_SIZE)));
     crossoverMax();
   }
 }
