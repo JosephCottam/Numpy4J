@@ -20,6 +20,11 @@ public class Performance {
     int size=SIZE;
     int iterations=ITERATIONS;
 
+    System.out.printf("items, iters, avg bridge time (ms), avg jvm time (ms), bridge/jvm\n");
+
+    int iterWidth = Integer.toString(FINAL_ITERATIONS).length();
+    String reportFormat = "%d, %" + iterWidth + "d, %.2f, %.2f, %.2f\n";
+
     while (size < FINAL_SIZE) {
       while (iterations < FINAL_ITERATIONS) {
         NPType type = new NPType();
@@ -43,7 +48,10 @@ public class Performance {
           break;
         }
 
-        System.out.printf("%d items; %d iters -- Bridge/JVM=Ratio  : %d/%d=%f\n", size, iterations, bridgeTime, jvmTime, bridgeTime/(double)jvmTime);
+        double avgbridgems = (bridgeTime/(double) iterations)/(double) 1000000;
+        double avgJVMms = (jvmTime/(double) iterations)/(double) 1000000;
+
+        System.out.printf(reportFormat, size, iterations, avgbridgems, avgJVMms, bridgeTime/(double)jvmTime);
         iterations=iterations*10;
       }
       iterations=ITERATIONS;
@@ -74,6 +82,7 @@ public class Performance {
     SIZE = Integer.parseInt(Args.key(args,"-n",Integer.toString(SIZE)));
     FINAL_ITERATIONS = Integer.parseInt(Args.key(args,"-fi",Integer.toString(FINAL_ITERATIONS)));
     FINAL_SIZE = Integer.parseInt(Args.key(args,"-fn",Integer.toString(FINAL_SIZE)));
+
     crossoverMax();
   }
 }
