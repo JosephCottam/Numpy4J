@@ -5,11 +5,9 @@
 
 const char* jNP_ARRAY_NAME = "np/NPArray";
 const char* jNP_ARRAY_BUFFER_FIELD = "buffer";
-const char* jNP_ARRAY_CACHE_FIELD = "jnicache";
 const char* jBYTE_BUFFER_NAME = "java/nio/ByteBuffer";
 const char* jBYTE_BUFFER_TYPE = "Ljava/nio/ByteBuffer;";
 jfieldID BUFFER_FID;
-jfieldID OBJ_CACHE_FID; 
 
 
 PyObject *npModule, *dtypeFunc, *fromBufferFunc;
@@ -32,8 +30,6 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   if((*env)->ExceptionOccurred(env)) {return;}
   BUFFER_FID = (*env)->GetFieldID(env, classNPArray, jNP_ARRAY_BUFFER_FIELD, jBYTE_BUFFER_TYPE);
   if((*env)->ExceptionOccurred(env)) {return;}
-  OBJ_CACHE_FID = (*env)->GetFieldID(env, classNPArray, jNP_ARRAY_CACHE_FIELD, "J");
-  if((*env)->ExceptionOccurred(env)) {return;}
   (*vm)->DetachCurrentThread(vm);
 
   //Setup python environment, acquire required functions
@@ -52,17 +48,9 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 
 void JNI_OnUnload(JavaVM *vm, void *reserved) {Py_Finalize();}
 
-//Stores the np array produced in the java object for later retrieval
-//TODO: Implement decref on java finalize via  JNI bridge or this caching strategy will leak memory on the python side
-void cache_np_array(JNIEnv *env, jobject jnparray, PyObject *nparray) {
-  (*env)->SetLongField(env, jnparray, OBJ_CACHE_FID, (long) nparray);
-}
-
 //Take a java NPArray and make a python np.array
 //TODO: Investigate caching these dtypes as they will likely be re-used
 PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
-  jlong pyobj = (*env)->GetLongField(env, jnparray, OBJ_CACHE_FID);
-  if (pyobj != -1) {return (PyObject*) pyobj;}
   
   //Acquire buffer information 
   jobject bufferRef = (*env)->GetObjectField(env, jnparray, BUFFER_FID);
@@ -83,7 +71,6 @@ PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
   Py_DECREF(dtype);
   Py_DECREF(arrayArgs);
   Py_DECREF(dtypeArgs);
-  cache_np_array(env, jnparray, nparray);
 
   return nparray;
 }
@@ -99,6 +86,7 @@ int invoke_int_func(PyObject *func, PyObject *nparray) {
   long rv = PyInt_AsLong(val);
   Py_DECREF(args);
   Py_DECREF(val);
+  Py_DECREF(nparray);
 
   return (int) rv;
 }

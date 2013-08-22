@@ -5,9 +5,9 @@ import java.nio.IntBuffer;
 import java.nio.ByteOrder;
 
 public class NPArray {
+  //NOTE:Fields are accessed BY NAME in JNI.  Name changes require JNI access changes as well
   private final ByteBuffer buffer; 
   private final NPType type;
-  private long jnicache=-1;
 
   private NPArray(ByteBuffer buffer, NPType type){
     this.buffer = buffer;
@@ -17,9 +17,6 @@ public class NPArray {
   public NPType type() {return type;}
   public int size() {return buffer.capacity()/type.dtype().bytes;}
   
-  /**Actual backing buffer.  This method is accessed by name via JNI, do not change without updating JNI code.**/
-  public ByteBuffer buffer() {return buffer;}
-
   //TODO: Modify the "buffer.getXXX" to respect dtype
   public Number getRaw(int i) {return buffer.getInt(i*type.dtype().bytes);}
   public int getRawInt(int i) {return buffer.getInt(i*type.dtype().bytes);}
