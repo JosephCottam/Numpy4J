@@ -53,8 +53,8 @@
     </java>
   </target>
 
-  <target name="test" description="Run tests">
-    <java classname="np.test.Tests" classpath="${bin}" fork="true">
+  <target name="perf" description="Performance tests">
+    <java classname="np.test.Performance" classpath="${bin}" fork="true">
       <jvmarg value="-Djava.library.path=${bin}"/>
       <arg line="${args}"/>
     </java>
