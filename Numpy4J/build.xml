@@ -5,7 +5,7 @@
 
 
 
-  <target name="build" description="Main build target" depends="_verify, jni, c"/>
+  <target name="build" description="Main build target" depends="_verify, javac, c"/>
   
   <target name="_verify" description="Verify the configuration information is present.">
     <mkdir dir="${bin}"/>
@@ -17,7 +17,7 @@
     </fail>
   </target>
   
-  <target name="jni" description="Build java classes and JNI headers">
+  <target name="javac" description="Build java classes and JNI headers">
     <javac srcdir="." destdir="./bin" includeantruntime="false"/>
     <javah outputFile="${bin}/c/JNIBridge.h" class="np.JNIBridge" classpath="${bin}" />
   </target>

@@ -101,24 +101,30 @@ PyObject* invoke_obj_func(PyObject *func, PyObject *nparray) {
 //TODO: Optimize if the python array actually shares a buffer with a java nparray that was an argument
 jobject make_jnparray(JNIEnv* env, PyObject *pynparray) {
   Py_buffer *buffer;
-  PyObject_GetBuffer(pynparray, buffer, PyBUF_SIMPLE);
+  int err = PyObject_GetBuffer(pynparray, buffer, PyBUF_SIMPLE);
   jobject bytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
 
   jclass dtype_cls = (*env)->FindClass(env, "np/NPType$DTYPE");
-  jfieldID fid = (*env)->GetStaticFieldID(env, dtype_cls, "float64", "np/NPType$DTYPE");//TODO: match from the input array
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jfieldID fid = (*env)->GetStaticFieldID(env, dtype_cls, "float64", "Lnp/NPType$DTYPE;");//TODO: match from the input array
+  if((*env)->ExceptionOccurred(env)) {return;}
   jobject jdtype = (*env)->GetStaticObjectField(env, dtype_cls, fid);
   if((*env)->ExceptionOccurred(env)) {return;}
   
   jclass nptype_cls = (*env)->FindClass(env, "np/NPType");
-  jmethodID nptype_const = (*env)->GetMethodID(env, nptype_cls, "<init>", "(Lnp/NPType$DTYPE)V");
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jmethodID nptype_const = (*env)->GetMethodID(env, nptype_cls, "<init>", "(Lnp/NPType$DTYPE;)V");
   if((*env)->ExceptionOccurred(env)) {return;}
   jobject nptype = (*env)->NewObject(env, nptype_cls, nptype_const, jdtype);
+  if((*env)->ExceptionOccurred(env)) {return;}
 
   jclass nparray_cls = (*env)->FindClass(env, "np/NPArray");
+  if((*env)->ExceptionOccurred(env)) {return;}
   jmethodID nparray_const = (*env)->GetMethodID(env, nparray_cls, "<init>", "(Ljava/nio/ByteBuffer;Lnp/NPType;)V");
   if((*env)->ExceptionOccurred(env)) {return;}
-  jobject nparray = (*env)->NewObject(env, nparray_cls, nparray_const, bytebuffer);
-
+  jobject nparray = (*env)->NewObject(env, nparray_cls, nparray_const, bytebuffer, nptype);
+  if((*env)->ExceptionOccurred(env)) {return;}
+  
   return nparray;
 }
 
