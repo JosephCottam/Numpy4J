@@ -14,6 +14,7 @@ public class NPType {
 
   /**Default NPType is int32 and c-order.**/
   public NPType() {this(DTYPE.int32, ORDER.c);}
+  public NPType(DTYPE dtype) {this(dtype, ORDER.c);}
   public NPType(DTYPE dtype, ORDER order) {
     this.dtype = dtype;
     this.order = order;

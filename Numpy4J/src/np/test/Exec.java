@@ -14,6 +14,6 @@ public class Exec {
 
     System.out.printf("Max: %s\n", bridge.max(array));
     System.out.printf("Min: %s\n", bridge.min(array));
-
+    System.out.printf("Log: %s\n", bridge.log(array));
   }
 }

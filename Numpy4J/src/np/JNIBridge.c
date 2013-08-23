@@ -10,13 +10,14 @@ const char* jBYTE_BUFFER_TYPE = "Ljava/nio/ByteBuffer;";
 jfieldID BUFFER_FID;
 
 
-PyObject *npModule, *dtypeFunc, *fromBufferFunc;
+PyObject *npModule, *dtypeFunc, *fromBufferFunc, *getBufferFunc;
 const char* NP_MODULE = "numpy";
 const char* NP_DTYPE_CONSTRUCTOR = "dtype";
 const char* NP_FROM_BUFFER = "frombuffer";
+const char* NP_GET_BUFFER = "getbuffer";
 
-PyObject *NP_INT32;
-PyObject *npMaxFunc, *npMinFunc;
+PyObject *NP_INT32, *NP_FLOAT64;
+PyObject *npMaxFunc, *npMinFunc, *npLogFunc;
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   //Safely cache relevant java class information
@@ -38,10 +39,13 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   npModule = PyImport_Import(PyString_FromString(NP_MODULE));
   dtypeFunc = PyObject_GetAttrString(npModule, NP_DTYPE_CONSTRUCTOR);
   fromBufferFunc = PyObject_GetAttrString(npModule, NP_FROM_BUFFER);
-
+  getBufferFunc = PyObject_GetAttrString(npModule, NP_GEt_BUFFER);
+  
   NP_INT32 = PyObject_GetAttrString(npModule, "int32");
+  NP_FLOAT64 = PyObject_GetAttrString(npModule, "float64");
   npMinFunc = PyObject_GetAttrString(npModule, "min");
   npMaxFunc = PyObject_GetAttrString(npModule, "max");
+  npLogFunc = PyObject_GetAttrString(npModule, "log");
 
   return JNI_VERSION_1_6; //TODO: 1.2 is "any JNI version"...might be able to use that instead
 }
@@ -76,7 +80,7 @@ PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
 }
 
 
-
+//--------------- IN/OUT BUSINESS ------------
 //Invoke a np function that returns an int
 int invoke_int_func(PyObject *func, PyObject *nparray) {
   PyObject *args = PyTuple_Pack(1, nparray);
@@ -86,19 +90,65 @@ int invoke_int_func(PyObject *func, PyObject *nparray) {
   long rv = PyInt_AsLong(val);
   Py_DECREF(args);
   Py_DECREF(val);
-  Py_DECREF(nparray);
-
   return (int) rv;
 }
+
+PyObject* invoke_obj_func(PyObject *func, PyObject *nparray) {
+  PyObject *args = PyTuple_Pack(1, nparray);
+  PyObject *val = PyObject_CallObject(func, args);
+  Py_DECREF(args);
+  return val;
+}
+
+//TODO: Optimize if the python array actually shares a buffer with a java nparray that was an argument
+jobject make_jnparray(JNIEnv* env, PyObject *pynparray) {
+  PyObject *args = PyTuple_Pack(1, pynparray);
+  PyObject *buffer = PyObject_CallObject(getBufferFunc, args);
+  Py_ssize_t capacity = ((Py_Buffer*) buffer)->len;
+  void *buf = ((Py_Buffer*) buffer)->buf;
+  jobject bytebuffer = (*env)->NewDirectByteBuffer(env, buf, capacity);
+
+  jclass dtype_class = (*env)->FindClass(env, "np/NPType");
+  jmethodID dtype_const = (*env)->GetMethodID(env, cls, "<init>", "()V");
+  jobject dtype = (*env)->NewObject(env, cls, dtype_class);
+
+  jclass nparray_class = (*env)->FindClass(env, "np/NPArray");
+  jmethodID nparray_const = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;,Lnp/NPType/DTYPE;)V");
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jobject nparray = (*env)->NewObject(env, cls, dtype_class, dtype, bytebuffer);
+
+  if (NULL == midInit) return NULL;
+  // Call back constructor to allocate a new instance, with an int argument
+
+
+  return bytebuffer;
+}
+
+
+//--------------- JNI CALL TARGETS ------------
 
 JNIEXPORT jint JNICALL Java_np_JNIBridge_max
 (JNIEnv *env, jobject this, jobject jnparray) {
   PyObject *nparray = make_nparray(env, jnparray);
-  return (jint) invoke_int_func(npMaxFunc, nparray);
+  jint rv = (jint) invoke_int_func(npMaxFunc, nparray); 
+  Py_DECREF(nparray);
+  return rv; 
 }
 
 JNIEXPORT jint JNICALL Java_np_JNIBridge_min
 (JNIEnv *env, jobject this, jobject jnparray) {
   PyObject *nparray = make_nparray(env, jnparray);
-  return (jint) invoke_int_func(npMinFunc, nparray);
+  jint rv = (jint) invoke_int_func(npMinFunc, nparray); 
+  Py_DECREF(nparray);
+  return rv; 
+}
+
+JNIEXPORT jobject JNICALL Java_np_JNIBridge_log
+(JNIEnv *env, jobject this, jobject jnparray) {
+  PyObject *nparray = make_nparray(env, jnparray);
+  PyObject *rslt = invoke_obj_func(npLogFunc, nparray);
+  jobject rv = make_jnparray(rslt);
+  Py_DECREF(nparray);
+  py_DECREF(rslt);
+  return rv;
 }
