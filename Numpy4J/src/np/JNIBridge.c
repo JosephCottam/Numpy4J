@@ -3,18 +3,11 @@
 #include "JNIBridge.h"
 #include <Python.h>
 
-const char* jNP_ARRAY_NAME = "np/NPArray";
-const char* jNP_ARRAY_BUFFER_FIELD = "buffer";
-const char* jBYTE_BUFFER_NAME = "java/nio/ByteBuffer";
 const char* jBYTE_BUFFER_TYPE = "Ljava/nio/ByteBuffer;";
-jfieldID BUFFER_FID;
+jfieldID BUFFER_FID, PYADDR_FID;
 
 
 PyObject *npModule, *dtypeFunc, *fromBufferFunc;
-const char* NP_MODULE = "numpy";
-const char* NP_DTYPE_CONSTRUCTOR = "dtype";
-const char* NP_FROM_BUFFER = "frombuffer";
-
 PyObject *NP_INT32, *NP_FLOAT64;
 PyObject *npMaxFunc, *npMinFunc, *npLogFunc;
 
@@ -24,20 +17,21 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   (*vm)->AttachCurrentThread(vm, (void **) &env, NULL);
   if((*env)->ExceptionOccurred(env)) {return;}
 
-  jclass classNPArray = (*env)->FindClass(env, jNP_ARRAY_NAME);
+  jclass classNPArray = (*env)->FindClass(env, "np/NPArray");
   if((*env)->ExceptionOccurred(env)) {return;}
-  jclass classByteBuffer = (*env)->FindClass(env, jBYTE_BUFFER_NAME);
+  jclass classByteBuffer = (*env)->FindClass(env, jBYTE_BUFFER_TYPE);
   if((*env)->ExceptionOccurred(env)) {return;}
-  BUFFER_FID = (*env)->GetFieldID(env, classNPArray, jNP_ARRAY_BUFFER_FIELD, jBYTE_BUFFER_TYPE);
+  BUFFER_FID = (*env)->GetFieldID(env, classNPArray, "buffer", jBYTE_BUFFER_TYPE);
   if((*env)->ExceptionOccurred(env)) {return;}
-  (*vm)->DetachCurrentThread(vm);
+  PYADDR_FID = (*env)->GetFieldID(env, classNPArray, "pyaddr", "J");
+  if((*env)->ExceptionOccurred(env)) {return;}  (*vm)->DetachCurrentThread(vm);
 
   //Setup python environment, acquire required functions
   Py_SetProgramName("numpy4J (Bridge)");  /* optional but recommended */
   Py_Initialize();
-  npModule = PyImport_Import(PyString_FromString(NP_MODULE));
-  dtypeFunc = PyObject_GetAttrString(npModule, NP_DTYPE_CONSTRUCTOR);
-  fromBufferFunc = PyObject_GetAttrString(npModule, NP_FROM_BUFFER);
+  npModule = PyImport_Import(PyString_FromString("numpy"));
+  dtypeFunc = PyObject_GetAttrString(npModule, "dtype");
+  fromBufferFunc = PyObject_GetAttrString(npModule, "frombuffer");
   
   NP_INT32 = PyObject_GetAttrString(npModule, "int32");
   NP_FLOAT64 = PyObject_GetAttrString(npModule, "float64");
@@ -50,9 +44,16 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 
 void JNI_OnUnload(JavaVM *vm, void *reserved) {Py_Finalize();}
 
+void save_addr(JNIEnv *env, jobject jnparray, PyObject *nparray) {
+  (*env)->SetLongField(env, jnparray, PYADDR_FID, (long) nparray);
+}
+
 //Take a java NPArray and make a python np.array
 //TODO: Investigate caching these dtypes as they will likely be re-used
 PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
+  jlong pyobj = (*env)->GetLongField(env, jnparray, PYADDR_FID);
+  if (pyobj != 0) {return (PyObject*) pyobj;}
+
   
   //Acquire buffer information 
   jobject bufferRef = (*env)->GetObjectField(env, jnparray, BUFFER_FID);
@@ -73,9 +74,45 @@ PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
   Py_DECREF(dtype);
   Py_DECREF(arrayArgs);
   Py_DECREF(dtypeArgs);
+  save_addr(env, jnparray, nparray);
 
   return nparray;
 }
+
+
+
+//TODO: Optimize if the python array actually shares a buffer with a java nparray that was an argument
+jobject make_jnparray(JNIEnv* env, PyObject *nparray) {
+  Py_buffer *buffer;
+  int err = PyObject_GetBuffer(nparray, buffer, PyBUF_SIMPLE);
+  jobject bytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
+
+  jclass dtype_cls = (*env)->FindClass(env, "np/NPType$DTYPE");
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jfieldID fid = (*env)->GetStaticFieldID(env, dtype_cls, "float64", "Lnp/NPType$DTYPE;");//TODO: match from the input array
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jobject jdtype = (*env)->GetStaticObjectField(env, dtype_cls, fid);
+  if((*env)->ExceptionOccurred(env)) {return;}
+  
+  jclass nptype_cls = (*env)->FindClass(env, "np/NPType");
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jmethodID nptype_const = (*env)->GetMethodID(env, nptype_cls, "<init>", "(Lnp/NPType$DTYPE;)V");
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jobject nptype = (*env)->NewObject(env, nptype_cls, nptype_const, jdtype);
+  if((*env)->ExceptionOccurred(env)) {return;}
+
+  jclass nparray_cls = (*env)->FindClass(env, "np/NPArray");
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jmethodID nparray_const = (*env)->GetMethodID(env, nparray_cls, "<init>", "(Ljava/nio/ByteBuffer;Lnp/NPType;)V");
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jobject jnparray = (*env)->NewObject(env, nparray_cls, nparray_const, bytebuffer, nptype);
+  if((*env)->ExceptionOccurred(env)) {return;}
+  save_addr(env, jnparray, nparray);
+  
+  return jnparray;
+}
+
+
 
 
 //--------------- IN/OUT BUSINESS ------------
@@ -98,44 +135,12 @@ PyObject* invoke_obj_func(PyObject *func, PyObject *nparray) {
   return val;
 }
 
-//TODO: Optimize if the python array actually shares a buffer with a java nparray that was an argument
-jobject make_jnparray(JNIEnv* env, PyObject *pynparray) {
-  Py_buffer *buffer;
-  int err = PyObject_GetBuffer(pynparray, buffer, PyBUF_SIMPLE);
-  jobject bytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
-
-  jclass dtype_cls = (*env)->FindClass(env, "np/NPType$DTYPE");
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jfieldID fid = (*env)->GetStaticFieldID(env, dtype_cls, "float64", "Lnp/NPType$DTYPE;");//TODO: match from the input array
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jobject jdtype = (*env)->GetStaticObjectField(env, dtype_cls, fid);
-  if((*env)->ExceptionOccurred(env)) {return;}
-  
-  jclass nptype_cls = (*env)->FindClass(env, "np/NPType");
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jmethodID nptype_const = (*env)->GetMethodID(env, nptype_cls, "<init>", "(Lnp/NPType$DTYPE;)V");
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jobject nptype = (*env)->NewObject(env, nptype_cls, nptype_const, jdtype);
-  if((*env)->ExceptionOccurred(env)) {return;}
-
-  jclass nparray_cls = (*env)->FindClass(env, "np/NPArray");
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jmethodID nparray_const = (*env)->GetMethodID(env, nparray_cls, "<init>", "(Ljava/nio/ByteBuffer;Lnp/NPType;)V");
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jobject nparray = (*env)->NewObject(env, nparray_cls, nparray_const, bytebuffer, nptype);
-  if((*env)->ExceptionOccurred(env)) {return;}
-  
-  return nparray;
-}
-
-
 //--------------- JNI CALL TARGETS ------------
 
 JNIEXPORT jint JNICALL Java_np_JNIBridge_max
 (JNIEnv *env, jobject this, jobject jnparray) {
   PyObject *nparray = make_nparray(env, jnparray);
   jint rv = (jint) invoke_int_func(npMaxFunc, nparray); 
-  Py_DECREF(nparray);
   return rv; 
 }
 
@@ -143,7 +148,6 @@ JNIEXPORT jint JNICALL Java_np_JNIBridge_min
 (JNIEnv *env, jobject this, jobject jnparray) {
   PyObject *nparray = make_nparray(env, jnparray);
   jint rv = (jint) invoke_int_func(npMinFunc, nparray); 
-  Py_DECREF(nparray);
   return rv; 
 }
 
@@ -152,7 +156,11 @@ JNIEXPORT jobject JNICALL Java_np_JNIBridge_log
   PyObject *nparray = make_nparray(env, jnparray);
   PyObject *rslt = invoke_obj_func(npLogFunc, nparray);
   jobject rv = make_jnparray(env, rslt);
-  Py_DECREF(nparray);
   Py_DECREF(rslt);
   return rv;
+}
+
+JNIEXPORT void JNICALL Java_np_JNIBridge_freePython
+(JNIEnv *env, jclass this, jlong addr) {
+  if (addr !=0) {Py_DECREF((PyObject*) addr);}
 }

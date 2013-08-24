@@ -8,11 +8,19 @@ public class NPArray {
   //NOTE:Fields are accessed BY NAME in JNI.  Name changes require JNI access changes as well
   private final ByteBuffer buffer; 
   private final NPType type;
+  
+  /**Address of any backing python resources.**/
+  private final long pyaddr = 0;
 
   private NPArray(ByteBuffer buffer, NPType type){
     this.buffer = buffer;
     this.type = type;
   }
+
+  protected void finalize() {
+    if (pyaddr!=0) {JNIBridge.freePython(pyaddr);}
+  }
+
 
   public NPType type() {return type;}
   public int size() {return buffer.capacity()/type.dtype().bytes;}
