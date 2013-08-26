@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "JNIBridge.h"
 #include <Python.h>
+#include <stdarg.h>
 
 const char* jBYTE_BUFFER_TYPE = "Ljava/nio/ByteBuffer;";
 jfieldID BUFFER_FID, PYADDR_FID;
@@ -9,7 +10,21 @@ jfieldID BUFFER_FID, PYADDR_FID;
 
 PyObject *npModule, *dtypeFunc, *fromBufferFunc;
 PyObject *NP_INT32, *NP_FLOAT64;
-PyObject *npMaxFunc, *npMinFunc, *npLogFunc;
+PyObject *npMaxFunc, *npMinFunc, *npLogFunc, *npMultFunc;
+
+void verifyPythons(char* kind, int count, PyObject *first, ...) {
+  PyObject *func=first;
+  va_list vals;
+  va_start(vals, first);
+  while(count != -1) {
+    if (func == NULL) {
+      printf("NULL %s %d...\n", kind, count);
+    }
+    count--;
+    func = va_arg(vals, PyObject*);
+  }
+  va_end(vals);
+}
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   //Safely cache relevant java class information
@@ -30,15 +45,21 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   Py_SetProgramName("numpy4J (Bridge)");  /* optional but recommended */
   Py_Initialize();
   npModule = PyImport_Import(PyString_FromString("numpy"));
-  dtypeFunc = PyObject_GetAttrString(npModule, "dtype");
-  fromBufferFunc = PyObject_GetAttrString(npModule, "frombuffer");
-  
   NP_INT32 = PyObject_GetAttrString(npModule, "int32");
   NP_FLOAT64 = PyObject_GetAttrString(npModule, "float64");
+  
+  fromBufferFunc = PyObject_GetAttrString(npModule, "frombuffer");
+  dtypeFunc = PyObject_GetAttrString(npModule, "dtype");
   npMinFunc = PyObject_GetAttrString(npModule, "min");
   npMaxFunc = PyObject_GetAttrString(npModule, "max");
   npLogFunc = PyObject_GetAttrString(npModule, "log");
-
+  npMultFunc = PyObject_GetAttrString(npModule, "multiply");
+  
+  verifyPythons("module", 1, npModule);
+  verifyPythons("types", 2, NP_INT32, NP_FLOAT64);
+  verifyPythons("function", 6, fromBufferFunc, dtypeFunc, npMinFunc, 
+                               npMaxFunc, npLogFunc, npMultFunc);
+  
   return JNI_VERSION_1_6; //TODO: 1.2 is "any JNI version"...might be able to use that instead
 }
 
@@ -83,8 +104,16 @@ PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
 
 //TODO: Optimize if the python array actually shares a buffer with a java nparray that was an argument
 jobject make_jnparray(JNIEnv* env, PyObject *nparray) {
-  Py_buffer *buffer;
-  int err = PyObject_GetBuffer(nparray, buffer, PyBUF_SIMPLE);
+  PyObject *getBuffer = PyObject_GetAttrString(npModule, "getbuffer");
+  PyObject *arrayArgs = PyTuple_Pack(1, nparray);
+  PyObject *npbuffer = PyObject_CallObject(getBuffer, arrayArgs);
+  
+  Py_buffer *buffer, *buffer2;
+  int check = PyObject_CheckBuffer(npbuffer);
+  int err = PyObject_GetBuffer(npbuffer, buffer, PyBUF_SIMPLE);
+  int err = PyObject_GetBuffer(nparray, buffer2, PyBUF_SIMPLE);
+  printf("Size: %u\n", buffer->len);
+  printf("Size2: %u\n", buffer2->len);
   jobject bytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
 
   jclass dtype_cls = (*env)->FindClass(env, "np/NPType$DTYPE");
@@ -135,6 +164,12 @@ PyObject* invoke_obj_func(PyObject *func, PyObject *nparray) {
   return val;
 }
 
+PyObject* invoke_obj_func2(PyObject *func, PyObject *npa1, PyObject *npa2) {
+  PyObject *args = PyTuple_Pack(2, npa1, npa2);
+  PyObject *val = PyObject_CallObject(func, args);
+  Py_DECREF(args);
+  return val;
+}
 //--------------- JNI CALL TARGETS ------------
 
 JNIEXPORT jint JNICALL Java_np_JNIBridge_max
@@ -160,7 +195,21 @@ JNIEXPORT jobject JNICALL Java_np_JNIBridge_log
   return rv;
 }
 
+JNIEXPORT jobject JNICALL Java_np_JNIBridge_mult
+(JNIEnv *env, jclass this, jobject a1, jobject a2) {
+  PyObject *npa1 = make_nparray(env, a1);
+  PyObject *npa2 = make_nparray(env, a2);
+  PyObject *rslt = invoke_obj_func2(npMultFunc, npa1, npa2);
+  jobject rv = make_jnparray(env, rslt);
+  Py_DECREF(rslt);
+  return rv;
+}
+
+
 JNIEXPORT void JNICALL Java_np_JNIBridge_freePython
 (JNIEnv *env, jclass this, jlong addr) {
   if (addr !=0) {Py_DECREF((PyObject*) addr);}
 }
+
+
+
