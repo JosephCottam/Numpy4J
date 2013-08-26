@@ -24,10 +24,6 @@
 
 
   <target name="c">
-    <copy todir="${bin}/c" flatten="true">
-      <fileset dir="${src}" includes="**/*.c"/>
-    </copy>
-
     <exec executable="gcc">
       <arg value="-o"/>
       <arg value="${bin}/libJNIbridge.jnilib"/>
@@ -35,7 +31,9 @@
       <arg value="-I${java.path}"/>
       <arg value="-I${python.path}"/>
       <arg value="-l${python.version}"/>
-      <arg value="${bin}/c/JNIbridge.c"/>
+      <arg value="-I${bin}/c"/>
+      <arg value="-O3"/>
+      <arg value="${src}/np/JNIbridge.c"/>
     </exec>
   </target>
   
