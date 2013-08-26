@@ -104,16 +104,8 @@ PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
 
 //TODO: Optimize if the python array actually shares a buffer with a java nparray that was an argument
 jobject make_jnparray(JNIEnv* env, PyObject *nparray) {
-  PyObject *getBuffer = PyObject_GetAttrString(npModule, "getbuffer");
-  PyObject *arrayArgs = PyTuple_Pack(1, nparray);
-  PyObject *npbuffer = PyObject_CallObject(getBuffer, arrayArgs);
-  
-  Py_buffer *buffer, *buffer2;
-  int check = PyObject_CheckBuffer(npbuffer);
-  int err = PyObject_GetBuffer(npbuffer, buffer, PyBUF_SIMPLE);
-  int err = PyObject_GetBuffer(nparray, buffer2, PyBUF_SIMPLE);
-  printf("Size: %u\n", buffer->len);
-  printf("Size2: %u\n", buffer2->len);
+  PyObject *arrayview = PyMemoryView_FromObject(nparray);
+  Py_buffer *buffer = PyMemoryView_GET_BUFFER(arrayview);
   jobject bytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
 
   jclass dtype_cls = (*env)->FindClass(env, "np/NPType$DTYPE");
