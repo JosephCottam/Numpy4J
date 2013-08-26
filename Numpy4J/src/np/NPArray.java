@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.ByteOrder;
 
+
+//TODO: Add slice support, and a corresponding "getValue(indexer)" that gets a value out, traversing slicing
 public class NPArray {
   //NOTE:Fields are accessed BY NAME in JNI.  Name changes require JNI access changes as well
   private final ByteBuffer buffer; 
@@ -30,15 +32,18 @@ public class NPArray {
   }
 
   protected void finalize() {
-    if (pyaddr!=0) {JNIBridge.freePython(pyaddr);}
+    //if (pyaddr!=0) {JNIBridge.freePython(pyaddr);}
   }
 
-
   public NPType type() {return type;}
+
+  /**How many items of the specified type are in this array?**/
   public int size() {return buffer.capacity()/type.rawtype().bytes;}
-  
-  //TODO: Modify the "buffer.getXXX" to respect nptype
-  public Number getRaw(int i) {
+
+  /**Treat the buffer as a flat aray, get the i-th item.
+   * Still respects dtype and byte-order.
+   */
+  public Number getFlat(int i) {
     int bytes = type.rawtype().bytes;
     switch(type.rawtype()) {
       case int8: return buffer.get(i);
@@ -49,16 +54,19 @@ public class NPArray {
       case float64: return buffer.getDouble(i*bytes);
       default: throw new IllegalArgumentException("Unsupported raw return type: " + type.rawtype()); 
     }
-    
   }
-  public int getRawInt(int i) {return buffer.getInt(i*type.rawtype().bytes);}
-  public Number getValue(Index i) {return null;}
-  public NPArray getSlice(Index i) {return null;}
+  public int getFlatInt(int i) {return buffer.getInt(i*type.rawtype().bytes);}
+  public void setFlatDouble(int i, double d) {buffer.putDouble(i, d);}
 
   //TODO: Extend to respect nptype 
-  public void arange() {
+  public void arange() {arange(0,1);}
+  public void arange(int start, int step) {
     IntBuffer ints = buffer.asIntBuffer();
-    for (int i=0; i<size(); i++) {ints.put(i,i);}
+    int val = start;
+    for (int i=0; i<size(); i++) {
+      ints.put(i,val);
+      val += step;
+    }
   }
 
   public static int DISPLAY_LIMIT=10;
@@ -70,7 +78,7 @@ public class NPArray {
     b.append("]{");
 
     for (int i=0; i<DISPLAY_LIMIT && i < size(); i++) {
-      b.append(getRaw(i).toString());
+      b.append(getFlat(i).toString());
       b.append(", ");
     }
     b.deleteCharAt(b.length()-1);
