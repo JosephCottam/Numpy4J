@@ -5,12 +5,21 @@
 #include <stdarg.h>
 
 const char* jBYTE_BUFFER_TYPE = "Ljava/nio/ByteBuffer;";
+const char* jNP_RAWTYPE = "Lnp/NPType$RAWTYPE;";
+const char* jNP_BYTEORDER = "Lnp/NPType$BYTE_ORDER;";
+const char* jNP_ORDER = "Lnp/NPType$ORDER;";
 jfieldID BUFFER_FID, PYADDR_FID;
-
+jmethodID NPARRAY_CID, NPTYPE_CID;
+jclass CLASS_NPTYPE, CLASS_NPARRAY;
 
 PyObject *npModule, *dtypeFunc, *fromBufferFunc;
-PyObject *NP_INT32, *NP_FLOAT64;
 PyObject *npMaxFunc, *npMinFunc, *npLogFunc, *npMultFunc;
+
+PyObject *NP_INT8, *NP_INT16, *NP_INT32, *NP_INT64, *NP_FLOAT32, *NP_FLOAT64;
+jobject JNP_INT8, JNP_INT16, JNP_INT32, JNP_INT64, JNP_FLOAT32, JNP_FLOAT64;
+
+jobject JNP_BIGENDIAN, JNP_LITTLEENDIAN, JNP_NATIVE;
+jobject JNP_CORDER, JNP_FORDER;
 
 void verifyPythons(char* kind, int count, PyObject *first, ...) {
   PyObject *func=first;
@@ -26,26 +35,62 @@ void verifyPythons(char* kind, int count, PyObject *first, ...) {
   va_end(vals);
 }
 
+jobject getStaticField(JNIEnv *env, jclass fromClass, const char *name, const char *typeName) {
+  jfieldID fid = (*env)->GetStaticFieldID(env, fromClass, name, typeName);
+  if((*env)->ExceptionOccurred(env)) {return;}
+  jobject obj = (*env)->GetStaticObjectField(env, fromClass, fid);
+  if((*env)->ExceptionOccurred(env)) {return;}
+  return obj;
+}
+
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   //Safely cache relevant java class information
   JNIEnv *env;
   (*vm)->AttachCurrentThread(vm, (void **) &env, NULL);
   if((*env)->ExceptionOccurred(env)) {return;}
 
-  jclass classNPArray = (*env)->FindClass(env, "np/NPArray");
-  if((*env)->ExceptionOccurred(env)) {return;}
   jclass classByteBuffer = (*env)->FindClass(env, jBYTE_BUFFER_TYPE);
+  jclass class_rawtype = (*env)->FindClass(env, "np/NPType$RAWTYPE");
+  jclass class_byteorder = (*env)->FindClass(env, "np/NPType$BYTE_ORDER");
+  jclass class_order = (*env)->FindClass(env, "np/NPType$ORDER");
+  CLASS_NPARRAY = (*env)->FindClass(env, "np/NPArray");
+  CLASS_NPTYPE = (*env)->FindClass(env, "np/NPType");
   if((*env)->ExceptionOccurred(env)) {return;}
-  BUFFER_FID = (*env)->GetFieldID(env, classNPArray, "buffer", jBYTE_BUFFER_TYPE);
+  
+  BUFFER_FID = (*env)->GetFieldID(env, CLASS_NPARRAY, "buffer", jBYTE_BUFFER_TYPE);
+  PYADDR_FID = (*env)->GetFieldID(env, CLASS_NPARRAY, "pyaddr", "J");
+  NPARRAY_CID = (*env)->GetMethodID(env, CLASS_NPARRAY, "<init>", "(Ljava/nio/ByteBuffer;Lnp/NPType;)V");
+  NPTYPE_CID = (*env)->GetMethodID(env, CLASS_NPTYPE, "<init>", "(Lnp/NPType$RAWTYPE;Lnp/NPType$ORDER;Lnp/NPType$BYTE_ORDER;)V");
   if((*env)->ExceptionOccurred(env)) {return;}
-  PYADDR_FID = (*env)->GetFieldID(env, classNPArray, "pyaddr", "J");
-  if((*env)->ExceptionOccurred(env)) {return;}  (*vm)->DetachCurrentThread(vm);
+
+  JNP_INT8 = getStaticField(env, class_rawtype, "int32", jNP_RAWTYPE);
+  JNP_INT16 = getStaticField(env, class_rawtype, "int16", jNP_RAWTYPE);
+  JNP_INT32 = getStaticField(env, class_rawtype, "int32", jNP_RAWTYPE);
+  JNP_INT64 = getStaticField(env, class_rawtype, "int64", jNP_RAWTYPE);
+  JNP_FLOAT32 = getStaticField(env, class_rawtype, "float32", jNP_RAWTYPE);
+  JNP_FLOAT64 = getStaticField(env, class_rawtype, "float64", jNP_RAWTYPE);
+  if((*env)->ExceptionOccurred(env)) {return;}
+
+  JNP_BIGENDIAN = getStaticField(env, class_byteorder, "big", jNP_BYTEORDER);
+  JNP_LITTLEENDIAN = getStaticField(env, class_byteorder, "little", jNP_BYTEORDER);
+  JNP_NATIVE = getStaticField(env, class_byteorder, "NATIVE", jNP_BYTEORDER);
+  if((*env)->ExceptionOccurred(env)) {return;}
+
+  JNP_CORDER = getStaticField(env, class_order, "c", jNP_ORDER);
+  JNP_FORDER = getStaticField(env, class_order, "fortran", jNP_ORDER);
+  if((*env)->ExceptionOccurred(env)) {return;}
+
+  (*vm)->DetachCurrentThread(vm);
 
   //Setup python environment, acquire required functions
   Py_SetProgramName("numpy4J (Bridge)");  /* optional but recommended */
   Py_Initialize();
   npModule = PyImport_Import(PyString_FromString("numpy"));
+  NP_INT8 = PyObject_GetAttrString(npModule, "int8");
+  NP_INT16 = PyObject_GetAttrString(npModule, "int16");
   NP_INT32 = PyObject_GetAttrString(npModule, "int32");
+  NP_INT64 = PyObject_GetAttrString(npModule, "int64");
+  NP_FLOAT32 = PyObject_GetAttrString(npModule, "float32");
   NP_FLOAT64 = PyObject_GetAttrString(npModule, "float64");
   
   fromBufferFunc = PyObject_GetAttrString(npModule, "frombuffer");
@@ -59,27 +104,33 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   verifyPythons("types", 2, NP_INT32, NP_FLOAT64);
   verifyPythons("function", 6, fromBufferFunc, dtypeFunc, npMinFunc, 
                                npMaxFunc, npLogFunc, npMultFunc);
-  
+
   return JNI_VERSION_1_6; //TODO: 1.2 is "any JNI version"...might be able to use that instead
 }
+
+int throwIllegalArg(JNIEnv *env, char *message ) {
+  jclass exClass = (*env)->FindClass( env, "java/lang/IllegalArgumentException");
+  return (*env)->ThrowNew( env, exClass, message );
+}
+
 
 void JNI_OnUnload(JavaVM *vm, void *reserved) {Py_Finalize();}
 
 void save_addr(JNIEnv *env, jobject jnparray, PyObject *nparray) {
   (*env)->SetLongField(env, jnparray, PYADDR_FID, (long) nparray);
+  if((*env)->ExceptionOccurred(env)) {return;}
 }
 
 //Take a java NPArray and make a python np.array
-//TODO: Investigate caching these dtypes as they will likely be re-used
 PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
   jlong pyobj = (*env)->GetLongField(env, jnparray, PYADDR_FID);
   if (pyobj != 0) {return (PyObject*) pyobj;}
-
   
   //Acquire buffer information 
   jobject bufferRef = (*env)->GetObjectField(env, jnparray, BUFFER_FID);
   jbyte* jbuffer = (*env)->GetDirectBufferAddress(env, bufferRef);
   jlong jsize = (*env)->GetDirectBufferCapacity(env, bufferRef);
+  if((*env)->ExceptionOccurred(env)) {return;}
   
   //Create a python buffer from the java buffer
   Py_ssize_t size = PyInt_AsSsize_t(PyInt_FromLong(jsize)); 
@@ -101,35 +152,77 @@ PyObject* make_nparray(JNIEnv *env, jobject jnparray) {
 }
 
 
+//Convert python numpy base types into java raw types
+jobject rawtype_Py2J(JNIEnv *env, PyObject *py_rawtype) {
+  if (py_rawtype == NP_INT8) {return JNP_INT8;}
+  if (py_rawtype == NP_INT16) {return JNP_INT16;}
+  if (py_rawtype == NP_INT32) {return JNP_INT32;}
+  if (py_rawtype == NP_INT64) {return JNP_INT64;}
+  if (py_rawtype == NP_FLOAT32) {return JNP_FLOAT32;}
+  if (py_rawtype == NP_FLOAT64) {return JNP_FLOAT64;}
+  throwIllegalArg(env, "Unsupported raw type requested (py->java conversion)");
+  if((*env)->ExceptionOccurred(env)) {return;}
+}
 
-//TODO: Optimize if the python array actually shares a buffer with a java nparray that was an argument
-jobject make_jnparray(JNIEnv* env, PyObject *nparray) {
+//Convert the python array-order indicator into the java array-order indicator
+//TODO: There are a lot of order & contiguous & c & f flags...this is probably more nuanced than I'm getting at here
+jobject order_Py2J(JNIEnv *env, PyObject *nparray) {
+  PyObject *flags = PyObject_GetAttrString(nparray, "flags");
+  PyObject *isC =  PyObject_GetAttrString(flags, "c_contiguous"); 
+ 
+  jobject rv;  
+  if (isC == Py_True) {rv = JNP_CORDER;}
+  else {rv = JNP_FORDER;}
+
+  Py_DECREF(flags);
+  Py_DECREF(isC);
+
+  return rv;
+}
+
+
+//Convert the python byte-order indicator into the java byte-order indicator
+jobject byteorder_Py2J(JNIEnv *env, PyObject *dtype) {
+  PyObject *py_byteorder =  PyObject_GetAttrString(dtype, "byteorder");
+  char orderindicator = PyString_AsString(py_byteorder)[0];
+  
+  Py_DECREF(py_byteorder);
+
+  switch(orderindicator) {
+    case ('='): return JNP_NATIVE; 
+    case ('<'): return JNP_LITTLEENDIAN;
+    case ('>'): return JNP_BIGENDIAN; 
+  }
+
+  throwIllegalArg(env, "Unsupported byte-order requested (py->java conversion)");
+}
+
+jobject make_nptype(JNIEnv *env, PyObject *nparray) {
+  PyObject *py_dtype = PyObject_GetAttrString(nparray, "dtype");
+  PyObject *py_rawType =  PyObject_GetAttrString(py_dtype, "type");
+  jobject jdtype = rawtype_Py2J(env, py_rawType);
+  jobject jorder = order_Py2J(env, nparray);
+  jobject jbyteorder = byteorder_Py2J(env, py_dtype);
+  if((*env)->ExceptionOccurred(env)) {return;}
+
+  jobject nptype = (*env)->NewObject(env, CLASS_NPTYPE, NPTYPE_CID, jdtype, jorder, jbyteorder);
+  if((*env)->ExceptionOccurred(env)) {return;}
+
+  Py_DECREF(py_dtype);
+  Py_DECREF(py_rawType);
+
+  return nptype;
+}
+
+jobject make_jnparray(JNIEnv *env, PyObject *nparray) {
   PyObject *arrayview = PyMemoryView_FromObject(nparray);
   Py_buffer *buffer = PyMemoryView_GET_BUFFER(arrayview);
-  jobject bytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
-
-  jclass dtype_cls = (*env)->FindClass(env, "np/NPType$DTYPE");
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jfieldID fid = (*env)->GetStaticFieldID(env, dtype_cls, "float64", "Lnp/NPType$DTYPE;");//TODO: match from the input array
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jobject jdtype = (*env)->GetStaticObjectField(env, dtype_cls, fid);
-  if((*env)->ExceptionOccurred(env)) {return;}
-  
-  jclass nptype_cls = (*env)->FindClass(env, "np/NPType");
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jmethodID nptype_const = (*env)->GetMethodID(env, nptype_cls, "<init>", "(Lnp/NPType$DTYPE;)V");
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jobject nptype = (*env)->NewObject(env, nptype_cls, nptype_const, jdtype);
+  jobject jbytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
+  jobject nptype = make_nptype(env, nparray); 
   if((*env)->ExceptionOccurred(env)) {return;}
 
-  jclass nparray_cls = (*env)->FindClass(env, "np/NPArray");
+  jobject jnparray = (*env)->NewObject(env, CLASS_NPARRAY, NPARRAY_CID, jbytebuffer, nptype);
   if((*env)->ExceptionOccurred(env)) {return;}
-  jmethodID nparray_const = (*env)->GetMethodID(env, nparray_cls, "<init>", "(Ljava/nio/ByteBuffer;Lnp/NPType;)V");
-  if((*env)->ExceptionOccurred(env)) {return;}
-  jobject jnparray = (*env)->NewObject(env, nparray_cls, nparray_const, bytebuffer, nptype);
-  if((*env)->ExceptionOccurred(env)) {return;}
-  save_addr(env, jnparray, nparray);
-  
   return jnparray;
 }
 
