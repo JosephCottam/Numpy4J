@@ -57,6 +57,7 @@ public class NPArray {
   }
   public int getFlatInt(int i) {return buffer.getInt(i*type.rawtype().bytes);}
   public void setFlatDouble(int i, double d) {buffer.putDouble(i, d);}
+  public void setFlatLong(int i, long d) {buffer.putLong(i, d);}
 
   //TODO: Extend to respect nptype 
   public void arange() {arange(0,1);}

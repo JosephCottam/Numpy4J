@@ -13,7 +13,7 @@ public class Performance {
 
   public static int ITERATIONS = 100;
   public static int SIZE = 10;
-  public static int FINAL_SIZE=1000000;
+  public static int FINAL_SIZE=2000000;
 
   public static void report(Action r) {
     int size=SIZE;
@@ -86,12 +86,29 @@ public class Performance {
           max = Math.max(max, array.getFlat(i).intValue());
         }
       }
-      public String name() {return "Max (Number)";}
+      public String name() {return "Max (NPArray->Number)";}
     };
 
     report(r);
   }
 
+
+  public static void mult() {
+    Action r = new Action() {
+      public void probeBridge(NPArray array) {BRIDGE.mult(array,array);}
+      public void probeJVM(NPArray array) {
+        for (int i=0; i<array.size(); i++) {
+          NPType t = array.type().rawtype(NPType.RAWTYPE.int64);
+          NPArray target = NPArray.allocate(t, array.size());
+          long v = array.getFlatInt(i);
+          array.setFlatLong(i, v);
+        }
+      }
+      public String name() {return "Mult (NPArray->long)";}
+    };
+
+    report(r);
+  }
 
   //Gets the value out as an 'int'...but you need a method for each primitive type
   public static void maxInt() {
@@ -103,7 +120,7 @@ public class Performance {
           max = Math.max(max, array.getFlatInt(i));
         }
       }
-      public String name() {return "Max (int)";}
+      public String name() {return "Max (NPArray->int)";}
     };
 
     report(r);
@@ -114,9 +131,10 @@ public class Performance {
     SIZE = Integer.parseInt(Args.key(args,"-n",Integer.toString(SIZE)));
     FINAL_SIZE = Integer.parseInt(Args.key(args,"-fn",Integer.toString(FINAL_SIZE)));
 
-    //log();
-    logArray();
     maxNumber();
     maxInt();
+    logArray();
+    log();
+    mult();
   }
 }

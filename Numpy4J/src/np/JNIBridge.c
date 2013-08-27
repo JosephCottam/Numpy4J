@@ -10,7 +10,6 @@ const char* jNP_BYTEORDER = "Lnp/NPType$BYTE_ORDER;";
 const char* jNP_ORDER = "Lnp/NPType$ORDER;";
 jfieldID BUFFER_FID, PYADDR_FID;
 jmethodID NPARRAY_CID, NPTYPE_CID;
-jclass CLASS_NPTYPE, CLASS_NPARRAY;
 
 PyObject *npModule, *dtypeFunc, *fromBufferFunc;
 PyObject *npMaxFunc, *npMinFunc, *npLogFunc, *npMultFunc;
@@ -53,14 +52,14 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   jclass class_rawtype = (*env)->FindClass(env, "np/NPType$RAWTYPE");
   jclass class_byteorder = (*env)->FindClass(env, "np/NPType$BYTE_ORDER");
   jclass class_order = (*env)->FindClass(env, "np/NPType$ORDER");
-  CLASS_NPARRAY = (*env)->FindClass(env, "np/NPArray");
-  CLASS_NPTYPE = (*env)->FindClass(env, "np/NPType");
+  jclass class_nptype = (*env)->FindClass(env, "np/NPType");
+  jclass class_nparray = (*env)->FindClass(env, "np/NPArray");
   if((*env)->ExceptionOccurred(env)) {return;}
   
-  BUFFER_FID = (*env)->GetFieldID(env, CLASS_NPARRAY, "buffer", jBYTE_BUFFER_TYPE);
-  PYADDR_FID = (*env)->GetFieldID(env, CLASS_NPARRAY, "pyaddr", "J");
-  NPARRAY_CID = (*env)->GetMethodID(env, CLASS_NPARRAY, "<init>", "(Ljava/nio/ByteBuffer;Lnp/NPType;)V");
-  NPTYPE_CID = (*env)->GetMethodID(env, CLASS_NPTYPE, "<init>", "(Lnp/NPType$RAWTYPE;Lnp/NPType$ORDER;Lnp/NPType$BYTE_ORDER;)V");
+  BUFFER_FID = (*env)->GetFieldID(env, class_nparray, "buffer", jBYTE_BUFFER_TYPE);
+  PYADDR_FID = (*env)->GetFieldID(env, class_nparray, "pyaddr", "J");
+  NPARRAY_CID = (*env)->GetMethodID(env, class_nparray, "<init>", "(Ljava/nio/ByteBuffer;Lnp/NPType;)V");
+  NPTYPE_CID = (*env)->GetMethodID(env, class_nptype, "<init>", "(Lnp/NPType$RAWTYPE;Lnp/NPType$ORDER;Lnp/NPType$BYTE_ORDER;)V");
   if((*env)->ExceptionOccurred(env)) {return;}
 
   JNP_INT8 = getStaticField(env, class_rawtype, "int32", jNP_RAWTYPE);
@@ -205,7 +204,8 @@ jobject make_nptype(JNIEnv *env, PyObject *nparray) {
   jobject jbyteorder = byteorder_Py2J(env, py_dtype);
   if((*env)->ExceptionOccurred(env)) {return;}
 
-  jobject nptype = (*env)->NewObject(env, CLASS_NPTYPE, NPTYPE_CID, jdtype, jorder, jbyteorder);
+  jclass cls = (*env)->FindClass(env, "np/NPType");
+  jobject nptype = (*env)->NewObject(env, cls, NPTYPE_CID, jdtype, jorder, jbyteorder);
   if((*env)->ExceptionOccurred(env)) {return;}
 
   Py_DECREF(py_dtype);
@@ -217,12 +217,21 @@ jobject make_nptype(JNIEnv *env, PyObject *nparray) {
 jobject make_jnparray(JNIEnv *env, PyObject *nparray) {
   PyObject *arrayview = PyMemoryView_FromObject(nparray);
   Py_buffer *buffer = PyMemoryView_GET_BUFFER(arrayview);
-  jobject jbytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
+  PyObject *len = PyLong_FromSize_t(buffer->len);
+  long length = PyLong_AsLong(len); 
+
+
+  jobject jbytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, (jlong) length);
+  //jobject jbytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
   jobject nptype = make_nptype(env, nparray); 
   if((*env)->ExceptionOccurred(env)) {return;}
 
-  jobject jnparray = (*env)->NewObject(env, CLASS_NPARRAY, NPARRAY_CID, jbytebuffer, nptype);
+  jclass class_nparray = (*env)->FindClass(env, "np/NPArray");
+  jobject jnparray = (*env)->NewObject(env, class_nparray, NPARRAY_CID, jbytebuffer, nptype);
   if((*env)->ExceptionOccurred(env)) {return;}
+
+  Py_DECREF(arrayview);
+  Py_DECREF(len);
   return jnparray;
 }
 
@@ -235,7 +244,6 @@ int invoke_int_func(PyObject *func, PyObject *nparray) {
   PyObject *args = PyTuple_Pack(1, nparray);
   PyObject *val = PyObject_CallObject(func, args);
   
-  //Cleanup for return
   long rv = PyInt_AsLong(val);
   Py_DECREF(args);
   Py_DECREF(val);
@@ -255,6 +263,8 @@ PyObject* invoke_obj_func2(PyObject *func, PyObject *npa1, PyObject *npa2) {
   Py_DECREF(args);
   return val;
 }
+
+
 //--------------- JNI CALL TARGETS ------------
 
 JNIEXPORT jint JNICALL Java_np_JNIBridge_max
