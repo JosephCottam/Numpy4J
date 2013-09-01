@@ -9,3 +9,4 @@ jep/*
 *.pyc
 bin
 TestResults
+*.swp

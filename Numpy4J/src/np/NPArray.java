@@ -23,7 +23,7 @@ public class NPArray {
    * and set to match the type's byte order.  The buffer view DOES NOT duplicate the
    * backing bytes, just the header information.
    */
-  private NPArray(ByteBuffer buffer, NPType type){
+  public NPArray(ByteBuffer buffer, NPType type){
     if (buffer.order() != type.byteorder().nio) {
       buffer = buffer.duplicate();
       buffer.order(type.byteorder().nio);
@@ -83,13 +83,21 @@ public class NPArray {
     }
   }
 
+
+
+  /**Present the same buffer, with different type information.**/
+  public NPArray recast(NPType type) {return new NPArray(buffer, type);}
+
+  /**Number of items to show in toString()**/
   public static int DISPLAY_LIMIT=10;
   
   public String toString() {
     StringBuilder b = new StringBuilder();
     b.append("NPArray[");
     b.append(size());
-    b.append("]{");
+    b.append("]");
+    b.append(type.toString());
+    b.append("{");
 
     for (int i=0; i<DISPLAY_LIMIT && i < size(); i++) {
       b.append(getFlat(i).toString());

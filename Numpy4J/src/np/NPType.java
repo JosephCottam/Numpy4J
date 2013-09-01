@@ -9,13 +9,17 @@ public class NPType {
      RAWTYPE(int bytes) {this.bytes = bytes;}
   }
   
-  enum BYTE_ORDER {
-    big(ByteOrder.BIG_ENDIAN), little(ByteOrder.LITTLE_ENDIAN), NATIVE(ByteOrder.nativeOrder());
+  public enum BYTE_ORDER {
+    big(ByteOrder.BIG_ENDIAN,">"), little(ByteOrder.LITTLE_ENDIAN,"<"), NATIVE(ByteOrder.nativeOrder(), "=");
     public final ByteOrder nio;
-    BYTE_ORDER(ByteOrder nio) {this.nio = nio;}
+    public final String symbol;
+    BYTE_ORDER(ByteOrder nio, String symbol) {
+      this.nio = nio;
+      this.symbol = symbol;
+    }
   }
 
-  enum ORDER {c,fortran,DEFER}
+  public enum ORDER {c,fortran,DEFER}
 
   private final RAWTYPE rawtype;
   private final ORDER order;
@@ -36,8 +40,10 @@ public class NPType {
   public NPType order(ORDER order) {return new NPType(this.rawtype, order, this.byteorder);}
   public ORDER order() {return order;}
 
-  public NPType byteOrder(BYTE_ORDER byteorder) {return new NPType(this.rawtype, this.order, byteorder);}
+  public NPType byteorder(BYTE_ORDER byteorder) {return new NPType(this.rawtype, this.order, byteorder);}
   public BYTE_ORDER byteorder() {return byteorder;}
+
+  public String toString() {return String.format("[%s, %s]", rawtype.toString(), byteorder.symbol);}
 
   /**NPType with values that can be dered set to deferred and others with sensible defaults.*/
   public static NPType defer() {return new NPType(RAWTYPE.DEFER, ORDER.DEFER, BYTE_ORDER.NATIVE);}

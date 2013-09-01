@@ -7,14 +7,14 @@ public class Exec {
   public static void main(String[] args){ 
     NPType type = new NPType();
     NPArray array = NPArray.allocate(type, 10);
-    array.arange();
+    array.arange(1,1);
     JNIBridge bridge= new JNIBridge();
 
     System.out.printf("Input: %s\n", array);
 
     System.out.printf("Max: %s\n", bridge.max(array));
-    System.out.printf("Mult: %s\n", bridge.mult(array, array));
     System.out.printf("Min: %s\n", bridge.min(array));
     System.out.printf("Log: %s\n", bridge.log(array));
+    System.out.printf("Mult: %s\n", bridge.mult(array, array));
   }
 }
