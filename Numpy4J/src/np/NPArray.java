@@ -33,10 +33,19 @@ public class NPArray {
   }
 
   protected void finalize() {
-    //if (pyaddr!=0) {JNIBridge.freePython(pyaddr);}
+    if (pyaddr!=0) {JNIBridge.freePython(pyaddr);}
   }
 
   public NPType type() {return type;}
+  
+  /**Return the underlying byte buffer. 
+   *
+   * WARNING: This is a reference to the internal structure.  
+   * Changes to values in the buffer are reflected in the original object.
+   * This should only be done with caution.
+   * (That being said, a lot good can be achieved by sharing the buffer.)
+   */
+  public ByteBuffer buffer() {return buffer;}
 
   /**How many items of the specified type are in this array?**/
   public int size() {return buffer.capacity()/type.rawtype().bytes;}

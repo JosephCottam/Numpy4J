@@ -9,7 +9,7 @@ library.
 Why bother?  At least one reason is that there is no reliable pure-Java 
 way to get vectorized performance for dense matrix operations. This is a
 _big deal_(TM).  Our preliminary investigation shows that (even with
-the JNI overhead) we can array-array multiplication several hundred times 
+the JNI overhead) we can do array-array multiplication several hundred times 
 faster by using the numpy and JNI over a naive pure-java solution.  Another is
 just to explore working with these two technologies at once.
 
@@ -44,15 +44,27 @@ With system.properties in place, in the Numpy4J directory, run "ant".
 
 Unit tests are run with "ant test".
 To also test it, run "ant exec".
-To do a quick(ish) perofrmance comparison, run "ant perf".
+To do a quick perofrmance comparison, run "ant perf".
+
+
 
 Status
 -------
 
-Most recent tests show that (100 iterations, array sizes greater than 5,000 items and two different machines):
+Performance is one of the goals, so we are monitoring it already.  We have two major comarisons groups.
+The first compares Numpy4J to using a ByteBuffer inside of Java.  The second compares Numpy4J to 
+using Java arrays.  Our tests are Max, Log and Multiply.  For the sake of curiosity, we ran the "max" test
+wit the ByteBuffer veresion returning Number objects and returning ints.  In general, if an array of values 
+is returned, Numpy4J is eventually faster by a significant amount.
 
-* Numpy4J Max v.s NPArray yeilding primtitives: Numpy4j is twice as slow 
-* Numpy4J Max vs. NPArray yielding Numbers: Numpy4j is five times faster
-* Numpy4J Log vs. NPArray primtives and double[] result: Numpy4j is a little less than twice as fast
-* Numpy4J Log vs. NParray primtivites and NPArray result: Numpy4j is a little more than twice as fast
-* Numpy4j multiply vs. NPArray primtives and NPArray result: Numpy4j is at least three times faster (small arrays) and can be several thousand times faster (large arrays)
+Results were acquired via the "ant perf" task.
+
+Running with 100 iterations (let the JVM know we're serrious?) and array sizes betweeen 10 and 5.2 million:
+
+* Max Numpy4J vs. primtive array:  Pritimite arrays register essentially zero time...Numpy4j always looses 
+* Max Numpy4J vs. NPArray returning ints: Numpy4j is 80\% slower than pure java
+* Max Numpy4J vs. NPArray returning Numbers: Numpy4j is five times faster
+* Log Numpy4J vs. NPArray returning ints: Numpy4j is a little more than twice as fast
+* Log Numpy4J vs. primtive array: Numpy4J is a little less than twice as fast
+* Multiply Numpy4J vs. NPArray returning ints: Numpy4J is a little more than three times faster
+* Multiply Numpy4J vs. primitive array: Numpy4J is a little less than twice as fast
