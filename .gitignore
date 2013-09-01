@@ -8,3 +8,4 @@ jep/*
 *.jnilib
 *.pyc
 bin
+TestResults

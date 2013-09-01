@@ -17,27 +17,28 @@ public class NPType {
 
   enum ORDER {c,fortran,DEFER}
 
-  private final RAWTYPE dtype;
+  private final RAWTYPE rawtype;
   private final ORDER order;
   private final BYTE_ORDER byteorder;
 
   /**Default NPType is int32 and c-order.**/
-  public NPType() {this(RAWTYPE.int32, ORDER.c, BYTE_ORDER.NATIVE);}
-  public NPType(RAWTYPE dtype, ORDER order, BYTE_ORDER byteorder) {
-    this.dtype = dtype;
+  public NPType() {this(RAWTYPE.int32);}
+  public NPType(RAWTYPE rawtype) {this(rawtype, ORDER.c, BYTE_ORDER.NATIVE);}
+  public NPType(RAWTYPE rawtype, ORDER order, BYTE_ORDER byteorder) {
+    this.rawtype = rawtype;
     this.order = order;
     this.byteorder = byteorder;
   }
 
   public NPType rawtype(RAWTYPE type) {return new NPType(type, this.order, this.byteorder);}
-  public RAWTYPE rawtype() {return dtype;}
+  public RAWTYPE rawtype() {return rawtype;}
 
-  public NPType order(ORDER order) {return new NPType(this.dtype, order, this.byteorder);}
+  public NPType order(ORDER order) {return new NPType(this.rawtype, order, this.byteorder);}
   public ORDER order() {return order;}
 
-  public NPType byteOrder(BYTE_ORDER byteorder) {return new NPType(this.dtype, this.order, byteorder);}
+  public NPType byteOrder(BYTE_ORDER byteorder) {return new NPType(this.rawtype, this.order, byteorder);}
   public BYTE_ORDER byteorder() {return byteorder;}
 
-  /**NPType with both dtype and order defered.**/
+  /**NPType with values that can be dered set to deferred and others with sensible defaults.*/
   public static NPType defer() {return new NPType(RAWTYPE.DEFER, ORDER.DEFER, BYTE_ORDER.NATIVE);}
 }

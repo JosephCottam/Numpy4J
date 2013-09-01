@@ -2,6 +2,7 @@
   <property file="system.properties"/> 
   <property name="src" value="./src"/>
   <property name="bin" value="./bin"/>
+  <property name="results" value="../TestResults/"/>
 
 
 
@@ -18,7 +19,11 @@
   </target>
   
   <target name="javac" description="Build java classes and JNI headers">
-    <javac srcdir="." destdir="./bin" includeantruntime="false"/>
+    <javac srcdir="." destdir="./bin" includeantruntime="false">
+      <classpath>
+        <fileset dir="./lib" includes="**/*.jar"/>
+      </classpath>
+    </javac>
     <javah outputFile="${bin}/c/JNIBridge.h" class="np.JNIBridge" classpath="${bin}" />
   </target>
 
@@ -37,6 +42,27 @@
     </exec>
   </target>
   
+  <target name="test" description="Unit tests (requires a full build beforehand).">
+    <mkdir dir="${results}"/>
+
+    <junit haltonfailure="no" fork="true" showoutput="true">
+      <jvmarg value="-Djava.library.path=${bin}"/>
+      <classpath>
+        <pathelement location="${bin}"/>
+        <fileset dir="./lib" includes="**/*.jar"/>
+      </classpath>
+
+      <formatter type="brief" usefile="false"/>
+      <formatter type="plain"/>
+
+      <batchtest todir="${results}">
+        <fileset dir="${src}">
+          <include name="**/*Test*"/>
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
 
   <target name="clean">
     <delete dir="${bin}"/>
@@ -55,4 +81,6 @@
       <arg line="${args}"/>
     </java>
   </target>
+
+
 </project>

@@ -3,6 +3,7 @@ package np;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.ByteOrder;
+import static np.NPType.RAWTYPE;
 
 
 //TODO: Add slice support, and a corresponding "getValue(indexer)" that gets a value out, traversing slicing
@@ -55,7 +56,10 @@ public class NPArray {
       default: throw new IllegalArgumentException("Unsupported raw return type: " + type.rawtype()); 
     }
   }
-  public int getFlatInt(int i) {return buffer.getInt(i*type.rawtype().bytes);}
+  
+  public int getFlatInt(int i) {return buffer.getInt(i*RAWTYPE.int32.bytes);}
+  public double getFlatDouble(int i) {return buffer.getDouble(i*RAWTYPE.float64.bytes);}
+
   public void setFlatDouble(int i, double d) {buffer.putDouble(i, d);}
   public void setFlatLong(int i, long d) {buffer.putLong(i, d);}
 

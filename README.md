@@ -1,7 +1,7 @@
 Numpy4J
 =======
 
-Interface Java with Numpy.  Try not to suck.
+Interface Java with Numpy.  Try not to be reasonable.
 
 What are you trying to accomplish? Get Java access to the highly tuned Numpy array
 library.  
@@ -42,6 +42,7 @@ This file has three key/value pairs:
 
 With system.properties in place, in the Numpy4J directory, run "ant".
 
+Unit tests are run with "ant test".
 To also test it, run "ant exec".
 To do a quick(ish) perofrmance comparison, run "ant perf".
 
