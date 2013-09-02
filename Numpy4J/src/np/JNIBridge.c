@@ -222,15 +222,16 @@ jobject make_jnparray(JNIEnv *env, PyObject *nparray) {
 
 
   jobject jbytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, (jlong) length);
-  //jobject jbytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, buffer->len);
   jobject nptype = make_nptype(env, nparray); 
   if((*env)->ExceptionOccurred(env)) {return;}
 
   jclass class_nparray = (*env)->FindClass(env, "np/NPArray");
   jobject jnparray = (*env)->NewObject(env, class_nparray, NPARRAY_CID, jbytebuffer, nptype);
   if((*env)->ExceptionOccurred(env)) {return;}
+  
+  save_addr(env, jnparray, nparray);
 
-  Py_DECREF(arrayview);
+  //DO NOT dispose of the memory view object; The buffer is a REFERENCE to a part of the memory view (see issue #9)
   Py_DECREF(len);
   return jnparray;
 }
