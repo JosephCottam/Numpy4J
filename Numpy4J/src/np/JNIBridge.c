@@ -8,18 +8,28 @@ const char* jBYTE_BUFFER_TYPE = "Ljava/nio/ByteBuffer;";
 const char* jNP_RAWTYPE = "Lnp/NPType$RAWTYPE;";
 const char* jNP_BYTEORDER = "Lnp/NPType$BYTE_ORDER;";
 const char* jNP_ORDER = "Lnp/NPType$ORDER;";
+
+//Cached java identifiers.  Often the ID is used in conjunction with a class,
+//but since classes are objects the class can't (always) be retained safely.
+//HOWEVER, the IDs can!  So the IDs are stored to save a lot of lookup code later
 jfieldID BUFFER_FID, PYADDR_FID;
 jmethodID NPARRAY_CID, NPTYPE_CID;
 
+
+//Cached python objects, cached to save lookup complexity at each use location
 PyObject *npModule, *dtypeFunc, *fromBufferFunc;
 PyObject *npMaxFunc, *npMinFunc, *npLogFunc, *npMultFunc;
 
+//Java/Python correspondence cache
+//TODO: Verify that it is safe to store these java objects.  It may be because they are all static singletons...but maybe not.
 PyObject *NP_INT8, *NP_INT16, *NP_INT32, *NP_INT64, *NP_FLOAT32, *NP_FLOAT64;
 jobject JNP_INT8, JNP_INT16, JNP_INT32, JNP_INT64, JNP_FLOAT32, JNP_FLOAT64;
 
 jobject JNP_BIGENDIAN, JNP_LITTLEENDIAN, JNP_NATIVE;
 jobject JNP_CORDER, JNP_FORDER;
 
+//Verify that the passed python objects are all not null.
+//Print a warning if any of them are null
 void verifyPythons(char* kind, int count, PyObject *first, ...) {
   PyObject *func=first;
   va_list vals;
@@ -34,6 +44,7 @@ void verifyPythons(char* kind, int count, PyObject *first, ...) {
   va_end(vals);
 }
 
+//Lookup a Java class's static member by name and type
 jobject getStaticField(JNIEnv *env, jclass fromClass, const char *name, const char *typeName) {
   jfieldID fid = (*env)->GetStaticFieldID(env, fromClass, name, typeName);
   if((*env)->ExceptionOccurred(env)) {return;}
@@ -107,14 +118,20 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   return JNI_VERSION_1_6; //TODO: 1.2 is "any JNI version"...might be able to use that instead
 }
 
+void JNI_OnUnload(JavaVM *vm, void *reserved) {Py_Finalize();}
+
 int throwIllegalArg(JNIEnv *env, char *message ) {
   jclass exClass = (*env)->FindClass( env, "java/lang/IllegalArgumentException");
   return (*env)->ThrowNew( env, exClass, message );
 }
 
-
-void JNI_OnUnload(JavaVM *vm, void *reserved) {Py_Finalize();}
-
+//Store a python object's reference inside of a java object
+//
+//This mechanism enables Java objects to be construted out of python allocated
+//memory without causing memory leaks (hopefully).  Python resource
+//references are stored and the DECREF is called in the Java object's finailze.
+//
+//This also allows some optimization by re-using python objects (no need to re-wrap)
 void save_addr(JNIEnv *env, jobject jnparray, PyObject *nparray) {
   (*env)->SetLongField(env, jnparray, PYADDR_FID, (long) nparray);
   if((*env)->ExceptionOccurred(env)) {return;}
@@ -196,7 +213,8 @@ jobject byteorder_Py2J(JNIEnv *env, PyObject *dtype) {
   throwIllegalArg(env, "Unsupported byte-order requested (py->java conversion)");
 }
 
-jobject make_nptype(JNIEnv *env, PyObject *nparray) {
+//Construct a Java NPType object for a given python numpy array
+jobject make_jnptype(JNIEnv *env, PyObject *nparray) {
   PyObject *py_dtype = PyObject_GetAttrString(nparray, "dtype");
   PyObject *py_rawType =  PyObject_GetAttrString(py_dtype, "type");
   jobject jdtype = rawtype_Py2J(env, py_rawType);
@@ -214,6 +232,7 @@ jobject make_nptype(JNIEnv *env, PyObject *nparray) {
   return nptype;
 }
 
+//Construct a java NPArray to share the memory with the given numpy array
 jobject make_jnparray(JNIEnv *env, PyObject *nparray) {
   PyObject *arrayview = PyMemoryView_FromObject(nparray);
   Py_buffer *buffer = PyMemoryView_GET_BUFFER(arrayview);
@@ -222,7 +241,7 @@ jobject make_jnparray(JNIEnv *env, PyObject *nparray) {
 
 
   jobject jbytebuffer = (*env)->NewDirectByteBuffer(env, buffer->buf, (jlong) length);
-  jobject nptype = make_nptype(env, nparray); 
+  jobject nptype = make_jnptype(env, nparray); 
   if((*env)->ExceptionOccurred(env)) {return;}
 
   jclass class_nparray = (*env)->FindClass(env, "np/NPArray");
@@ -231,7 +250,7 @@ jobject make_jnparray(JNIEnv *env, PyObject *nparray) {
   
   save_addr(env, jnparray, nparray);
 
-  //DO NOT dispose of the memory view object; The buffer is a REFERENCE to a part of the memory view (see issue #9)
+  //DO NOT dispose of the memory view object; The buffer is a POINTER to a part of the memory view (see issue #9)
   Py_DECREF(len);
   return jnparray;
 }
