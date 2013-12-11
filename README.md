@@ -31,28 +31,24 @@ from the python to the Java side
 Build
 ------
 
-Before you can build, a system.properties file needs to be created in the Numpy4J subdirectory 
-(i.e., right next to the "build.xml" file).
-The entries in system.properties are used by the c-compiler to properly do imports and linking.
-This file has three key/value pairs:
-
+A number of default properties have been set in the default.properties file.
+However, defaults can be overriden through a system.properties file in the same directory.
+The system.properties file has the same entries as default.properties and the same syntax.
 * java.path= _location of the JNI headers for your system_. Can be found by locating jni.h on your system. 
-* python.path=_location of the python version-specific headers_.  Can be found by locating Python.h on your system.
+* java.os= _JNI header subdirectory for OS-specific files_. Commonly includes jni_md.h. Just the OS-directory name is required.
+* python.path= _location of the python root._  Needs to have both the 'lib' and 'include' directories in it.
 * python.version=_python version name_.  Something like "python2.7". Running "python --version" will probably give a good idea of what to put here.
 
 With system.properties in place, in the Numpy4J directory, run "ant".
 
 Unit tests are run with "ant test".
-To also test it, run "ant exec".
 To do a quick perofrmance comparison, run "ant perf".
-
-
 
 Status
 -------
 
 Performance is one of the goals, so we are monitoring it already.  We have two major comarisons groups.
-The first compares Numpy4J to using a ByteBuffer inside of Java.  The second compares Numpy4J to 
+The first compares Numpy4J to using a ByteBuffer wrapped inside of a Java NPArray.  The second compares Numpy4J to 
 using Java arrays.  Our tests are Max, Log and Multiply.  For the sake of curiosity, we ran the "max" test
 wit the ByteBuffer veresion returning Number objects and returning ints.  In general, if an array of values 
 is returned, Numpy4J is eventually faster by a significant amount.
