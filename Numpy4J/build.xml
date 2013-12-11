@@ -1,5 +1,7 @@
 <project name="numpy4j" default="build">
-  <property file="system.properties"/> 
+  <property environment="env"/>
+  <property file="system.properties"/>
+  <property file="default.properties"/> 
   <property name="src" value="./src"/>
   <property name="bin" value="./bin"/>
   <property name="results" value="../TestResults/"/>
@@ -11,11 +13,19 @@
   <target name="_verify" description="Verify the configuration information is present.">
     <mkdir dir="${bin}"/>
 
-    <available file="system.properties" property="build.properties.present"/>
-    <fail unless="build.properties.present">
-      System.properties file not found.\n
-      Needs to include java.headers (path), python.headers (path) and python.version (pythonX.X).
-    </fail>
+    <available file="${java.path}/jni.h" property="build.jni.present"/>
+    <fail unless="build.jni.present"
+      message ="
+      Could not find jni.h. Looked in ${java.path}.
+      Ensure that JAVA_HOME is properly set or specify using a system.properties file
+      (see default.properties for relevant property names)." />
+    
+    <available file="${python.path}/Python.h" property="build.python.present"/>
+    <fail unless="build.pyhton.present"
+      message ="
+      Could not find Python.h. Looked in ${python.path}.
+      Ensure that PYTHONPATH is properly set or specify using a system.properties file
+      (see default.properties for relevant property names)." />
   </target>
   
   <target name="javac" description="Build java classes and JNI headers">
@@ -34,6 +44,7 @@
       <arg value="${bin}/libJNIbridge.jnilib"/>
       <arg value="-shared"/>
       <arg value="-I${java.path}"/>
+      <arg value="-I${java.path}/${java.os}"/>
       <arg value="-I${python.path}"/>
       <arg value="-l${python.version}"/>
       <arg value="-I${bin}/c"/>
@@ -75,7 +86,7 @@
     </java>
   </target>
 
-  <target name="perf" description="Performance tests">
+  <target name="perf" description="Performance tests" depends="build">
     <java classname="np.test.Performance" classpath="${bin}" fork="true">
       <jvmarg value="-Djava.library.path=${bin}"/>
       <arg line="${args}"/>
