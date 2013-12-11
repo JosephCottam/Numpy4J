@@ -20,10 +20,10 @@
       Ensure that JAVA_HOME is properly set or specify using a system.properties file
       (see default.properties for relevant property names)." />
     
-    <available file="${python.path}/Python.h" property="build.python.present"/>
-    <fail unless="build.pyhton.present"
+    <available file="${python.path}/include" type="dir" property="build.python.present"/>
+    <fail unless="build.python.present"
       message ="
-      Could not find Python.h. Looked in ${python.path}.
+      Could not find ${python.path}/include.
       Ensure that PYTHONPATH is properly set or specify using a system.properties file
       (see default.properties for relevant property names)." />
   </target>
@@ -45,10 +45,18 @@
       <arg value="-shared"/>
       <arg value="-I${java.path}"/>
       <arg value="-I${java.path}/${java.os}"/>
-      <arg value="-I${python.path}"/>
-      <arg value="-l${python.version}"/>
+      <arg value="-I${python.path}/include"/>
+      <arg value="-I${python.path}/include/${python.version}"/>
       <arg value="-I${bin}/c"/>
+      <arg value="-L${python.path}/lib"/>
+      <arg value="-ldl"/>
+      <arg value="-l${python.version}"/>
+      <arg value="-g"/>
+      <arg value="-Wall"/>
+      <arg value="-fwrapv"/>
       <arg value="-O3"/>
+      <arg value="-Wstrict-prototypes"/>
+      <arg value="-fno-strict-aliasing"/>
       <arg value="${src}/np/JNIbridge.c"/>
     </exec>
   </target>
